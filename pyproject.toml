@@ -1,0 +1,24 @@
+[project]
+name = "fuel_terminal_security_logistics_gatekeeper"
+version = "0.1.0"
+description = "fuel_terminal_security_logistics_gatekeeper using crewAI"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "crewai[litellm,tools]==1.10.1",
+]
+
+[project.scripts]
+fuel_terminal_security_logistics_gatekeeper = "fuel_terminal_security_logistics_gatekeeper.main:run"
+run_crew = "fuel_terminal_security_logistics_gatekeeper.main:run"
+train = "fuel_terminal_security_logistics_gatekeeper.main:train"
+replay = "fuel_terminal_security_logistics_gatekeeper.main:replay"
+test = "fuel_terminal_security_logistics_gatekeeper.main:test"
+run_with_trigger = "fuel_terminal_security_logistics_gatekeeper.main:run_with_trigger"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "crew"
