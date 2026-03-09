@@ -1,9 +1,9 @@
 import os
 from datetime import datetime
-from crewai import Agent, Crew, Process, Task, LLM
+from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
-# Importamos las herramientas con los nombres de archivo exactos (Mayúsculas)
+# Importación de herramientas
 try:
     from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
     from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool import VehicleRegistryTool
@@ -19,19 +19,15 @@ except ImportError:
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
     """FuelTerminalSecurityLogisticsGatekeeper crew"""
 
-    def __init__(self):
-        self.fecha_actual_txt = datetime.now().strftime('%A, %d de %B de %Y')
-        self.shared_llm = LLM(
-            model="gemini/gemini-1.5-pro", # Versión estable recomendada
-            api_key=os.getenv("GOOGLE_API_KEY"),
-            temperature=0.2
-        )
+    # Definimos el modelo como un string directo (Gemini 3.1 Pro Preview)
+    # Esto evita el error de importación de la clase LLM
+    llm_terminal = "gemini/gemini-3.1-pro-preview"
 
     @agent
     def security_authentication_specialist(self) -> Agent:
         return Agent(
             config=self.agents_config['security_authentication_specialist'],
-            llm=self.shared_llm,
+            llm=self.llm_terminal,
             tools=[AccessControlTool()],
             verbose=True,
             allow_delegation=False
@@ -41,7 +37,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def registry_validation_specialist(self) -> Agent:
         return Agent(
             config=self.agents_config['registry_validation_specialist'],
-            llm=self.shared_llm,
+            llm=self.llm_terminal,
             tools=[VehicleRegistryTool()],
             verbose=True,
             allow_delegation=False
@@ -51,7 +47,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def intelligent_scheduling_coordinator(self) -> Agent:
         return Agent(
             config=self.agents_config['intelligent_scheduling_coordinator'],
-            llm=self.shared_llm,
+            llm=self.llm_terminal,
             tools=[OutlookCalendarTool()],
             verbose=True,
             allow_delegation=False
@@ -61,7 +57,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def order_logging_specialist(self) -> Agent:
         return Agent(
             config=self.agents_config['order_logging_specialist'],
-            llm=self.shared_llm,
+            llm=self.llm_terminal,
             tools=[OrderManagementTool()],
             verbose=True,
             allow_delegation=False
@@ -71,7 +67,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def multi_channel_communications_manager(self) -> Agent:
         return Agent(
             config=self.agents_config['multi_channel_communications_manager'],
-            llm=self.shared_llm,
+            llm=self.llm_terminal,
             verbose=True,
             allow_delegation=False
         )
