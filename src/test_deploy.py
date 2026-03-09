@@ -3,31 +3,27 @@ import os
 
 print("--- [INICIANDO DIAGNÓSTICO DE DESPLIEGUE] ---")
 
-# 1. Verificar Rutas
+# 1. Verificar Directorio y Path
 print(f"Directorio actual: {os.getcwd()}")
 print(f"PYTHONPATH: {os.environ.get('PYTHONPATH', 'No definido')}")
 
-# 2. Intentar importar CrewAI
+# 2. Intentar importar CrewAI y Tools
 try:
     import crewai
     import crewai_tools
-    print(f"✅ CrewAI instalado (Versión: {crewai.__version__})")
-    print(f"✅ CrewAI Tools instalado")
+    from crewai_tools import BaseTool
+    print("✅ CrewAI y CrewAI-Tools: Cargados correctamente")
 except ImportError as e:
     print(f"❌ Error de librerías: {e}")
+    sys.exit(1)
 
 # 3. Verificar acceso a los archivos del proyecto
 try:
+    # Intentamos una importación relativa al PYTHONPATH configurado
     from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
     print("✅ Módulos del proyecto: Localizados y cargados")
-except ImportError as e:
-    print(f"❌ Error de rutas del proyecto: {e}")
+except Exception as e:
+    print(f"❌ Error de rutas del proyecto o código: {e}")
+    sys.exit(1)
 
-# 4. Verificar BaseTool (El error que tuvimos antes)
-try:
-    from crewai_tools import BaseTool
-    print("✅ BaseTool: Importación correcta")
-except ImportError:
-    print("❌ BaseTool: No se pudo importar desde crewai_tools")
-
-print("--- [FIN DEL DIAGNÓSTICO] ---")
+print("--- [DIAGNÓSTICO COMPLETADO EXITOSAMENTE] ---")
