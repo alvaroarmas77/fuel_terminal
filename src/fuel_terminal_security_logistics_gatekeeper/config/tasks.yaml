@@ -1,66 +1,32 @@
 phase_1___user_authentication:
   description: >
-    Accede a la pestaña 'Authorized_Users' en 'Master_Control.xlsx' ubicada en la carpeta 'Fuel_Terminal_System' de OneDrive. 
-    Valida el correo del remitente ({sender_email}) contra la columna 'Email'. 
-    Si no está registrado, responde "Access Denied: Your email is not registered." y termina el proceso. 
-    Si está autorizado, procede a la Fase 2.
-  expected_output: 'Resultado de autenticación: "Access Granted" con detalles o "Access Denied".'
-  agent: security_authentication_specialist
+    Recibir el ID del conductor {driver_id} y verificarlo usando AccessControlTool. 
+    Determinar si tiene permiso de entrada hoy {current_date}.
+  expected_output: >
+    Un estado de "Acceso Concedido" o "Acceso Denegado" con el nombre del conductor.
 
 phase_2___registry_validation:
   description: >
-    Accede a la pestaña 'Vehicle_Registry' en 'Master_Control.xlsx'. 
-    Verifica que la placa ({truck_plate}) y el nombre del chofer ({driver_name}) coincidan con los registros existentes. 
-    Si no coinciden o no existen, responde "Request Rejected: Vehicle or Driver credentials not found." 
-    Si son válidos, procede a la Fase 3.
-  expected_output: 'Resultado de validación: "Registry Validated" o "Request Rejected".'
-  agent: registry_validation_specialist
-  context:
-    - phase_1___user_authentication
+    Validar la placa del vehículo {plate_id} en el registro oficial. 
+    Verificar que el seguro y la inspección técnica estén al día.
+  expected_output: >
+    Resumen técnico del vehículo y confirmación de aptitud para carga.
 
 phase_3___intelligent_scheduling:
   description: >
-    HOY ES {current_date}. Utiliza esta fecha como punto de referencia absoluto.
-    Busca disponibilidad para la fecha y hora solicitada ({requested_datetime}) en los 7 calendarios de Outlook: 
-    'Terminal_Isla_1', 'Terminal_Isla_2', 'Terminal_Isla_3', 'Terminal_Isla_4', 'Terminal_Isla_5', 'Terminal_Isla_6' y 'Terminal_Isla_7'.
-    Las citas deben ser de exactamente 30 minutos sin solapamientos. 
-    Si el slot está libre en cualquier isla, resérvalo inmediatamente. 
-    Si está ocupado en todas, propone las 3 alternativas más cercanas (slots de 30 min) a partir de la fecha de referencia. 
-    Utiliza la placa del camión ({truck_plate}) como referencia en el asunto del evento.
-  expected_output: 'Resultado de agendamiento: "Slot Confirmed" con el nombre de la Isla asignada y horario, o "Slot Unavailable" con 3 alternativas.'
-  expected_output: 'Resultado de agendamiento: "Slot Confirmed" con el nombre de la Isla asignada y horario, o "Slot Unavailable" con 3 alternativas.'
-  agent: intelligent_scheduling_coordinator
-  context:
-    - phase_2___registry_validation
+    Consultar el calendario para la ubicación {terminal_location}. 
+    Buscar un espacio disponible para la carga inmediata.
+  expected_output: >
+    Hora asignada y número de bahía de carga (ej: Bahía 04).
 
 phase_4___order_logging:
   description: >
-    Utilizando la información confirmada de la Fase 3, genera un registro en 'Master_Control_Orders.xlsx'. 
-    Debes generar un OrderID único (formato FL-2026-NNNN). 
-    Registra: OrderID, Fecha de solicitud, Email Despachador ({sender_email}), Placa ({truck_plate}), 
-    Nombre Chofer ({driver_name}), Volumen ({fuel_volume}), Isla Asignada, Fecha Cita, Hora Inicio y Hora Fin.
-  expected_output: 'Confirmación de registro exitoso en Master_Control_Orders.xlsx con el OrderID generado.'
-  agent: order_logging_specialist
-  context:
-    - phase_3___intelligent_scheduling
-
-excel_order_database_management:
-  description: >
-    Asegura la integridad del archivo 'Master_Control_Orders.xlsx'. Si el archivo no existe en la carpeta 
-    'Fuel_Terminal_System', créalo con los encabezados correspondientes. 
-    Inserta la fila con los datos de {truck_plate}, {driver_name} y {fuel_volume}.
-  expected_output: 'Archivo Excel actualizado y verificado.'
-  agent: order_logging_specialist
-  context:
-    - phase_4___order_logging
+    Generar el registro de la orden de combustible para el pedido {order_id}.
+  expected_output: >
+    Número de confirmación de orden y detalles del producto (Diesel/Gasolina).
 
 phase_5___multi_channel_communications:
   description: >
-    Ejecuta el protocolo de comunicación dual usando el OrderID: 
-    1) Email profesional al despachador ({sender_email}) con tabla de detalles del pedido y la cita. 
-    2) Email simplificado al chofer ({driver_email}) con la Isla asignada y la hora de carga. 
-    Ambos correos deben referenciar el OrderID generado.
-  expected_output: 'Confirmación de envío de correos a despachador y chofer.'
-  agent: multi_channel_communications_manager
-  context:
-    - excel_order_database_management
+    Compilar toda la información anterior en un mensaje claro para el despacho de logística.
+  expected_output: >
+    Un mensaje de texto/correo electrónico listo para ser enviado con el resumen de la operación.
