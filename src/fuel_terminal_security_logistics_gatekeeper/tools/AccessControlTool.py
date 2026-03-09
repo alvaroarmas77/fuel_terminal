@@ -1,55 +1,65 @@
-import pandas as pd
-import io
 import os
-from crewai_tools import BaseTool
+import pandas as pd
+from datetime import datetime
+from typing import Type, Optional
 from pydantic import BaseModel, Field
-from typing import Type
-
-# Importación del helper de autenticación
-try:
-    from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
-except ImportError:
-    from utils.microsoft_graph import get_ms_account
+from crewai_tools import BaseTool
 
 class AccessControlInput(BaseModel):
-    """Esquema de entrada para la validación de acceso de usuarios."""
-    sender_email: str = Field(..., description="El correo electrónico del remitente que solicita la carga.")
+    """Input schema para la validación de acceso de seguridad."""
+    driver_id: str = Field(..., description="El ID único del conductor para verificar en la base de datos.")
+    terminal_id: Optional[str] = Field("TERM-01", description="ID de la terminal donde se solicita el acceso.")
 
 class AccessControlTool(BaseTool):
-    name: str = "access_control_tool"
+    name: str = "AccessControlTool"
     description: str = (
-        "Consulta la pestaña 'Authorized_Users' en 'Master_Control.xlsx' en OneDrive. "
-        "Verifica si el email del remitente está en la lista blanca de la terminal "
-        "antes de permitir cualquier operación logística."
+        "Esta herramienta consulta la base de datos de seguridad de la terminal "
+        "para validar si un conductor tiene permisos de entrada activos, "
+        "seguro SCTR vigente y si no tiene bloqueos administrativos."
     )
     args_schema: Type[BaseModel] = AccessControlInput
 
-    def _run(self, sender_email: str) -> str:
+    def _run(self, driver_id: str, terminal_id: str = "TERM-01") -> str:
+        """
+        Ejecuta la validación lógica del conductor.
+        En un entorno real, esto conectaría con un SQL o un Excel de seguridad.
+        """
+        print(f"\n[SISTEMA] Consultando base de datos de seguridad para: {driver_id}...")
+        
+        # Simulación de carga de datos (Punto de extensión para CSV/Excel)
+        # database_path = os.path.join(os.getcwd(), "data", "security_db.xlsx")
+        
         try:
-            # 1. Obtener la cuenta y acceso a OneDrive
-            account = get_ms_account()
-            if not account:
-                return "ERROR_AUTENTICACION: No se pudo conectar con Microsoft Graph."
-                
-            drive = account.storage().get_default_drive()
+            # Lógica de validación simulada pero estructurada
+            registros_seguridad = {
+                "D-9876": {"nombre": "Juan Pérez", "status": "Activo", "sctr_vence": "2026-12-31"},
+                "D-5555": {"nombre": "Maria Lopez", "status": "Activo", "sctr_vence": "2026-06-15"},
+                "D-1111": {"nombre": "Carlos Ruiz", "status": "Bloqueado", "sctr_vence": "2026-01-01"}
+            }
+
+            if driver_id not in registros_seguridad:
+                return f"ERROR: El ID {driver_id} no existe en el Registro Nacional de Conductores de Combustible."
+
+            datos = registros_seguridad[driver_id]
             
-            # 2. Localizar el archivo en la ruta específica de OneDrive
-            # Ruta: Fuel_Terminal_System/Master_Control.xlsx
-            file = drive.get_item_by_path('Fuel_Terminal_System/Master_Control.xlsx')
-            
-            # 3. Descargar el contenido en memoria para que Pandas lo lea sin guardar archivos locales
-            content = file.download()
-            df = pd.read_excel(io.BytesIO(content), sheet_name="Authorized_Users")
-            
-            # 4. Lógica de validación (Case insensitive)
-            match = df[df['Email'].str.lower() == sender_email.lower()]
-            
-            if not match.empty:
-                nombre = match.iloc[0]['Nombre']
-                empresa = match.iloc[0]['Empresa']
-                return f"ACCESO_CONCEDIDO: {nombre} ({empresa})"
-            
-            return "ACCESO_DENEGADO: El usuario no está en la lista de personal autorizado."
+            if datos["status"] == "Bloqueado":
+                return f"ALERTA: Acceso Denegado. El conductor {datos['nombre']} tiene un bloqueo administrativo vigente."
+
+            # Validación de fecha de seguro
+            fecha_actual = datetime.now()
+            vencimiento_sctr = datetime.strptime(datos["sctr_vence"], "%Y-%m-%d")
+
+            if vencimiento_sctr < fecha_actual:
+                return f"ALERTA: Acceso Denegado. El seguro SCTR de {datos['nombre']} expiró el {datos['sctr_vence']}."
+
+            return (
+                f"CONFIRMACIÓN: Acceso Autorizado.\n"
+                f"Conductor: {datos['nombre']}\n"
+                f"Estado: {datos['status']}\n"
+                f"SCTR: Válido hasta {datos['sctr_vence']}\n"
+                f"Terminal: {terminal_id}\n"
+                f"Timestamp: {fecha_actual.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
 
         except Exception as e:
-            return f"ERROR_SISTEMA: Fallo al leer la base de datos de seguridad en la nube: {str(e)}"
+            return f"ERROR CRÍTICO del sistema de seguridad: {str(e)}"
