@@ -68,36 +68,36 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     @task
     def phase_1___user_authentication(self) -> Task:
         return Task(
-            config=self.tasks_config['phase_1___user_authentication'],
-            agent=self.security_authentication_specialist # SIN PARENTESIS
+            config=self.tasks_config['phase_1___user_authentication']
+            #agent=self.security_authentication_specialist # SIN PARENTESIS
         )
 
     @task
     def phase_2___registry_validation(self) -> Task:
         return Task(
-            config=self.tasks_config['phase_2___registry_validation'],
-            agent=self.registry_validation_specialist # SIN PARENTESIS
+            config=self.tasks_config['phase_2___registry_validation']
+            #agent=self.registry_validation_specialist # SIN PARENTESIS
         )
 
     @task
     def phase_3___intelligent_scheduling(self) -> Task:
         return Task(
-            config=self.tasks_config['phase_3___intelligent_scheduling'],
-            agent=self.intelligent_scheduling_coordinator # SIN PARENTESIS
+            config=self.tasks_config['phase_3___intelligent_scheduling']
+            #agent=self.intelligent_scheduling_coordinator # SIN PARENTESIS
         )
 
     @task
     def phase_4___order_logging(self) -> Task:
         return Task(
-            config=self.tasks_config['phase_4___order_logging'],
-            agent=self.order_logging_specialist # SIN PARENTESIS
+            config=self.tasks_config['phase_4___order_logging']
+            #agent=self.order_logging_specialist # SIN PARENTESIS
         )
 
     @task
     def phase_5___multi_channel_communications(self) -> Task:
         return Task(
-            config=self.tasks_config['phase_5___multi_channel_communications'],
-            agent=self.multi_channel_communications_manager # SIN PARENTESIS
+            config=self.tasks_config['phase_5___multi_channel_communications']
+            #agent=self.multi_channel_communications_manager # SIN PARENTESIS
         )
 
     @crew
