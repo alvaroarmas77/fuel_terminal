@@ -1,8 +1,21 @@
 import sys
+import os
 import warnings
 from datetime import datetime
-# Importamos tu clase desde el archivo crew.py
-from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
+
+# --- PATH FIX: Esto permite que GitHub Actions encuentre tus archivos ---
+# Agregamos la carpeta 'src' al camino de búsqueda de Python
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_path = os.path.abspath(os.path.join(current_dir, "../../"))
+if src_path not in sys.path:
+    sys.path.append(src_path)
+# -----------------------------------------------------------------------
+
+try:
+    from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
+except ModuleNotFoundError:
+    # Fallback si el nombre del módulo falla: importar directamente
+    from crew import FuelTerminalSecurityLogisticsGatekeeperCrew
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
@@ -14,7 +27,7 @@ def run():
     
     print(f"### Iniciando Operaciones con Gemini 3.1 Pro Preview ###")
     try:
-        # Aquí lanzamos la lógica definida en crew.py
+        # Ejecución del Crew
         FuelTerminalSecurityLogisticsGatekeeperCrew().crew().kickoff(inputs=inputs)
         print("### Proceso completado con éxito ###")
     except Exception as e:
