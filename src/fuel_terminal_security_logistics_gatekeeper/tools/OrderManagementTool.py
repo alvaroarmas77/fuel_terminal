@@ -7,65 +7,77 @@ from crewai_tools import BaseTool
 from pydantic import BaseModel, Field
 from typing import Type
 
-# Silenciamos advertencias de openpyxl que ensucian el log de GitHub
+# Silenciar advertencias de openpyxl
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
-# Importación del helper de autenticación con manejo de rutas
 try:
     from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
 except ImportError:
     try:
         from utils.microsoft_graph import get_ms_account
     except ImportError:
-        # Fallback para entornos de test locales
-        def get_ms_account(): raise Exception("Módulo microsoft_graph no encontrado.")
+        def get_ms_account(): return None
 
 class OrderManagementInput(BaseModel):
-    """Esquema detallado para el registro final de la orden de carga en el ERP/OneDrive."""
-    dispatcher_email: str = Field(..., description="Email del despachador que solicitó la carga.")
-    truck_plate: str = Field(..., description="Placa del camión validada (ej. ABC-123).")
-    driver_name: str = Field(..., description="Nombre completo del conductor validado.")
-    fuel_volume: str = Field(..., description="Volumen de combustible (ej. 5000 Gal).")
-    assigned_island: str = Field(..., description="La isla o bahía asignada (ej. Isla_3).")
-    start_time: str = Field(..., description="Hora de inicio del slot (HH:MM).")
-    end_time: str = Field(..., description="Hora de fin del slot (HH:MM).")
+    """Esquema para el registro final de la orden de carga."""
+    dispatcher_email: str = Field(..., description="Email del despachador.")
+    truck_plate: str = Field(..., description="Placa del camión.")
+    driver_name: str = Field(..., description="Nombre del conductor.")
+    fuel_volume: str = Field(..., description="Volumen (ej. 5000 Gal).")
+    assigned_island: str = Field(..., description="Isla asignada.")
+    start_time: str = Field(..., description="Hora inicio.")
+    end_time: str = Field(..., description="Hora fin.")
 
 class OrderManagementTool(BaseTool):
     name: str = "order_management_tool"
-    description: str = (
-        "Crea el registro oficial en 'Master_Control_Orders.xlsx' en OneDrive. "
-        "Genera un ID único correlativo (FL-2026-NNNN) para cada operación exitosa "
-        "y asegura la persistencia de los datos logísticos."
-    )
+    description: str = "Registra órdenes en Master_Control_Orders.xlsx en OneDrive."
     args_schema: Type[BaseModel] = OrderManagementInput
 
-    def _run(
-        self, 
-        dispatcher_email: str, 
-        truck_plate: str, 
-        driver_name: str, 
-        fuel_volume: str, 
-        assigned_island: str, 
-        start_time: str, 
-        end_time: str
-    ) -> str:
-        """Ejecuta el registro de la orden mediante la API de Microsoft Graph."""
+    def _run(self, dispatcher_email: str, truck_plate: str, driver_name: str, 
+             fuel_volume: str, assigned_island: str, start_time: str, end_time: str) -> str:
         try:
-            # Conexión con Microsoft 365
             account = get_ms_account()
-            storage = account.storage()
-            drive = storage.get_default_drive()
+            if not account: return "ERROR: No hay conexión con MS Graph."
             
-            folder_path = 'Fuel_Terminal_System'
-            file_name = 'Master_Control_Orders.xlsx'
-            full_path = f"{folder_path}/{file_name}"
+            drive = account.storage().get_default_drive()
+            full_path = 'Fuel_Terminal_System/Master_Control_Orders.xlsx'
             
-            # 1. Obtener o inicializar el historial de órdenes
             try:
                 file_item = drive.get_item_by_path(full_path)
                 content = file_item.download()
                 df = pd.read_excel(io.BytesIO(content), engine='openpyxl')
             except Exception:
-                # Si el archivo no existe o está vacío, definimos la estructura base
-                df = pd.DataFrame(columns=[
-                    "OrderID", "Date", "Dispatcher", "Plate", "Driver", "Volume", "Island", "Start", "End"
+                df = pd.DataFrame(columns=["OrderID", "Date", "Dispatcher", "Plate", "Driver", "Volume", "Island", "Start", "End"])
+
+            # Generar ID
+            new_id = f"FL-2026-{len(df) + 1:04d}"
+            
+            # Crear nueva entrada (Cierre exacto de diccionario)
+            new_entry = {
+                "OrderID": new_id,
+                "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "Dispatcher": dispatcher_email,
+                "Plate": truck_plate,
+                "Driver": driver_name,
+                "Volume": fuel_volume,
+                "Island": assigned_island,
+                "Start": start_time,
+                "End": end_time
+            }
+
+            # Concatenación corregida (Cierre exacto de listas y funciones)
+            df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+
+            # Buffer de salida
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False)
+            
+            # Subida
+            target_folder = drive.get_item_by_path('Fuel_Terminal_System')
+            target_folder.upload(output.getvalue(), name='Master_Control_Orders.xlsx')
+            
+            return f"EXITO: Orden {new_id} registrada."
+
+        except Exception as e:
+            return f"ERROR_CRITICO: {str(e)}"
