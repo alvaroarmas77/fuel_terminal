@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta
-from crewai.tools import BaseTool
+from crewai_tools import BaseTool
 from pydantic import BaseModel, Field
 from typing import Type
 
