@@ -13,20 +13,24 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip' # Activa el caché nativo de GitHub para Python
-
+          # Eliminamos cache: 'pip' momentáneamente para forzar una instalación limpia
+          
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          # --prefer-binary acelera la instalación de pandas y numpy
+          # Forzamos reinstalación limpia para evitar conflictos de Pydantic V1 vs V2
+          pip install --no-cache-dir --force-reinstall pydantic crewai crewai-tools
+          # Instalamos el resto de dependencias y el proyecto local
           pip install --prefer-binary -r requirements.txt
-      - name: Run Diagnostic Test ##empieza la modificación aqui
+          pip install -e .
+
+      - name: Run Diagnostic Test
         env:
           PYTHONPATH: ${{ github.workspace }}/src
-        run: python src/test_deploy.py #hasta aqui
+        run: python src/test_deploy.py
 
       - name: Run Gatekeeper Agent
-        if: success() # Solo corre si el test de arriba pasó, acá termina la modificacion
+        if: success()
         env:
           # Inyectamos el PATH para que Python encuentre el paquete 'src'
           PYTHONPATH: ${{ github.workspace }}/src
