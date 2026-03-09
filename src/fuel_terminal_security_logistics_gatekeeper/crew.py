@@ -2,17 +2,11 @@ import os
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
-# Importación robusta de herramientas
-try:
-    from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
-    from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool import VehicleRegistryTool
-    from fuel_terminal_security_logistics_gatekeeper.tools.OutlookCalendarTool import OutlookCalendarTool
-    from fuel_terminal_security_logistics_gatekeeper.tools.OrderManagementTool import OrderManagementTool
-except ImportError:
-    from tools.AccessControlTool import AccessControlTool
-    from tools.VehicleRegistryTool import VehicleRegistryTool
-    from tools.OutlookCalendarTool import OutlookCalendarTool
-    from tools.OrderManagementTool import OrderManagementTool
+# Importaciones absolutas para evitar ambigüedad en el entorno del Runner
+from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
+from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool import VehicleRegistryTool
+from fuel_terminal_security_logistics_gatekeeper.tools.OutlookCalendarTool import OutlookCalendarTool
+from fuel_terminal_security_logistics_gatekeeper.tools.OrderManagementTool import OrderManagementTool
 
 @CrewBase
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
@@ -22,19 +16,16 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        # Configuración del modelo Gemini 3.1 Pro Preview
         self.gemini_llm = "gemini/gemini-3.1-pro-preview"
 
-    # --- DEFINICIÓN DE AGENTES ---
-
+    # --- AGENTES ---
     @agent
     def security_authentication_specialist(self) -> Agent:
         return Agent(
             config=self.agents_config['security_authentication_specialist'],
-            tools=[AccessControlTool()],
+            tools=[AccessControlTool()], # Instancia aquí
             llm=self.gemini_llm,
-            verbose=True,
-            allow_delegation=False
+            verbose=True
         )
 
     @agent
@@ -43,8 +34,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['registry_validation_specialist'],
             tools=[VehicleRegistryTool()],
             llm=self.gemini_llm,
-            verbose=True,
-            allow_delegation=False
+            verbose=True
         )
 
     @agent
@@ -53,8 +43,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['intelligent_scheduling_coordinator'],
             tools=[OutlookCalendarTool()],
             llm=self.gemini_llm,
-            verbose=True,
-            allow_delegation=False
+            verbose=True
         )
 
     @agent
@@ -63,8 +52,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['order_logging_specialist'],
             tools=[OrderManagementTool()],
             llm=self.gemini_llm,
-            verbose=True,
-            allow_delegation=False
+            verbose=True
         )
 
     @agent
@@ -73,52 +61,47 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['multi_channel_communications_manager'],
             tools=[], 
             llm=self.gemini_llm,
-            verbose=True,
-            allow_delegation=False
+            verbose=True
         )
 
-    # --- DEFINICIÓN DE TAREAS (Con instanciación de agentes corregida) ---
-
+    # --- TAREAS (Sin paréntesis en el agente) ---
     @task
     def phase_1___user_authentication(self) -> Task:
         return Task(
             config=self.tasks_config['phase_1___user_authentication'],
-            agent=self.security_authentication_specialist()
+            agent=self.security_authentication_specialist # SIN PARENTESIS
         )
 
     @task
     def phase_2___registry_validation(self) -> Task:
         return Task(
             config=self.tasks_config['phase_2___registry_validation'],
-            agent=self.registry_validation_specialist()
+            agent=self.registry_validation_specialist # SIN PARENTESIS
         )
 
     @task
     def phase_3___intelligent_scheduling(self) -> Task:
         return Task(
             config=self.tasks_config['phase_3___intelligent_scheduling'],
-            agent=self.intelligent_scheduling_coordinator()
+            agent=self.intelligent_scheduling_coordinator # SIN PARENTESIS
         )
 
     @task
     def phase_4___order_logging(self) -> Task:
         return Task(
             config=self.tasks_config['phase_4___order_logging'],
-            agent=self.order_logging_specialist()
+            agent=self.order_logging_specialist # SIN PARENTESIS
         )
 
     @task
     def phase_5___multi_channel_communications(self) -> Task:
         return Task(
             config=self.tasks_config['phase_5___multi_channel_communications'],
-            agent=self.multi_channel_communications_manager()
+            agent=self.multi_channel_communications_manager # SIN PARENTESIS
         )
-
-    # --- ENSAMBLAJE ---
 
     @crew
     def crew(self) -> Crew:
-        """Organiza la ejecución secuencial de los 5 especialistas"""
         return Crew(
             agents=self.agents,
             tasks=self.tasks,
