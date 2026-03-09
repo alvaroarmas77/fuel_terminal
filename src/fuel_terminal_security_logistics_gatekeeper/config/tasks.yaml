@@ -1,80 +1,66 @@
----
 phase_1___user_authentication:
-  description: 'Access the Authorized_Users sheet in Master_Control.xlsx and validate
-    the sender''s email address ({sender_email}) against the allowed list. If the
-    sender is not listed, return "Access Denied: Your email is not registered." and
-    terminate the process. If authorized, proceed to Phase 2.'
-  expected_output: 'Authentication result indicating either "Access Granted" with
-    user details or "Access Denied: Your email is not registered." If denied, the
-    workflow must terminate immediately.'
+  description: >
+    Accede a la pestaña 'Authorized_Users' en 'Master_Control.xlsx' ubicada en la carpeta 'Fuel_Terminal_System' de OneDrive. 
+    Valida el correo del remitente ({sender_email}) contra la columna 'Email'. 
+    Si no está registrado, responde "Access Denied: Your email is not registered." y termina el proceso. 
+    Si está autorizado, procede a la Fase 2.
+  expected_output: 'Resultado de autenticación: "Access Granted" con detalles o "Access Denied".'
   agent: security_authentication_specialist
+
 phase_2___registry_validation:
-  description: 'Access the Vehicle_Registry sheet in Master_Control.xlsx and verify
-    that the Truck Plate ({truck_plate}) and Driver Name ({driver_name}) provided
-    in the email are registered and match existing records. If not found, return "Request
-    Rejected: Vehicle or Driver credentials not found." If found, proceed to Phase
-    3.'
-  expected_output: 'Registry validation result indicating either "Registry Validated"
-    with vehicle and driver details or "Request Rejected: Vehicle or Driver credentials
-    not found."'
+  description: >
+    Accede a la pestaña 'Vehicle_Registry' en 'Master_Control.xlsx'. 
+    Verifica que la placa ({truck_plate}) y el nombre del chofer ({driver_name}) coincidan con los registros existentes. 
+    Si no coinciden o no existen, responde "Request Rejected: Vehicle or Driver credentials not found." 
+    Si son válidos, procede a la Fase 3.
+  expected_output: 'Resultado de validación: "Registry Validated" o "Request Rejected".'
   agent: registry_validation_specialist
   context:
-  - phase_1___user_authentication
+    - phase_1___user_authentication
+
 phase_3___intelligent_scheduling:
-  description: Search all 7 Outlook calendars (Islands 1-7) for the requested appointment
-    slot ({requested_datetime}). Appointments must be in 30-minute discrete intervals
-    with no overlaps. If the slot is free, reserve it and proceed to Phase 4. If taken,
-    propose the 3 next available 30-minute slots across any island. Handle ongoing
-    threads using Truck Plate as reference for continuous correspondence.
-  expected_output: Scheduling result showing either "Slot Confirmed" with island assignment
-    and time details, or "Slot Unavailable" with 3 alternative time slots across available
-    islands.
+  description: >
+    HOY ES {current_date}. Utiliza esta fecha como punto de referencia absoluto.
+    Busca disponibilidad para la fecha y hora solicitada ({requested_datetime}) en los 7 calendarios de Outlook: 
+    'Terminal_Isla_1', 'Terminal_Isla_2', 'Terminal_Isla_3', 'Terminal_Isla_4', 'Terminal_Isla_5', 'Terminal_Isla_6' y 'Terminal_Isla_7'.
+    Las citas deben ser de exactamente 30 minutos sin solapamientos. 
+    Si el slot está libre en cualquier isla, resérvalo inmediatamente. 
+    Si está ocupado en todas, propone las 3 alternativas más cercanas (slots de 30 min) a partir de la fecha de referencia. 
+    Utiliza la placa del camión ({truck_plate}) como referencia en el asunto del evento.
+  expected_output: 'Resultado de agendamiento: "Slot Confirmed" con el nombre de la Isla asignada y horario, o "Slot Unavailable" con 3 alternativas.'
+  expected_output: 'Resultado de agendamiento: "Slot Confirmed" con el nombre de la Isla asignada y horario, o "Slot Unavailable" con 3 alternativas.'
   agent: intelligent_scheduling_coordinator
   context:
-  - phase_2___registry_validation
+    - phase_2___registry_validation
+
 phase_4___order_logging:
-  description: 'Create and maintain an Excel/Google Sheets file called "Master_Control_Orders.xlsx"
-    with the following columns: OrderID, Date of Request, Dispatcher Email, Truck
-    Plate, Driver Name, Fuel Volume (Gallons), Assigned Island, Appointment Date,
-    Start Time, End Time. For each confirmed appointment, append a new row with complete
-    order details including: Date of Request, Dispatcher Email ({sender_email}), Truck
-    Plate ({truck_plate}), Driver Name ({driver_name}), Fuel Volume ({fuel_volume}),
-    Assigned Island, Appointment Date, and Start/End Time. Generate unique OrderID
-    for each entry. Ensure data integrity and audit trail compliance.'
-  expected_output: 'Confirmation of successful order logging with generated unique
-    OrderID and complete record details stored in Master_Control_Orders.xlsx Excel
-    file, including: OrderID, Truck Plate, Driver Name, and Order Volume in Gallons
-    as specifically requested.'
+  description: >
+    Utilizando la información confirmada de la Fase 3, genera un registro en 'Master_Control_Orders.xlsx'. 
+    Debes generar un OrderID único (formato FL-2026-NNNN). 
+    Registra: OrderID, Fecha de solicitud, Email Despachador ({sender_email}), Placa ({truck_plate}), 
+    Nombre Chofer ({driver_name}), Volumen ({fuel_volume}), Isla Asignada, Fecha Cita, Hora Inicio y Hora Fin.
+  expected_output: 'Confirmación de registro exitoso en Master_Control_Orders.xlsx con el OrderID generado.'
   agent: order_logging_specialist
   context:
-  - phase_3___intelligent_scheduling
+    - phase_3___intelligent_scheduling
+
 excel_order_database_management:
-  description: 'Maintain a comprehensive Excel database (Master_Control_Orders.xlsx)
-    that tracks all fuel loading orders. The Excel file must contain the following
-    columns: OrderID, Date of Request, Dispatcher Email, Truck Plate, Driver Name,
-    Fuel Volume (Gallons), Assigned Island, Appointment Date, Start Time, End Time.
-    Generate unique OrderIDs (format: FL-YYYY-NNNN) for each new order. Ensure every
-    order entry includes the required data: truck plate ({truck_plate}), driver name
-    ({driver_name}), and order volume in gallons ({fuel_volume}). Create the Excel
-    file if it doesn''t exist, or append new records to existing file.'
-  expected_output: Excel file Master_Control_Orders.xlsx successfully updated with
-    new order record containing unique OrderID, truck plate, driver name, fuel volume
-    in gallons, and all appointment details. Confirmation of successful Excel database
-    entry with the generated OrderID.
+  description: >
+    Asegura la integridad del archivo 'Master_Control_Orders.xlsx'. Si el archivo no existe en la carpeta 
+    'Fuel_Terminal_System', créalo con los encabezados correspondientes. 
+    Inserta la fila con los datos de {truck_plate}, {driver_name} y {fuel_volume}.
+  expected_output: 'Archivo Excel actualizado y verificado.'
   agent: order_logging_specialist
   context:
-  - phase_4___order_logging
+    - phase_4___order_logging
+
 phase_5___multi_channel_communications:
-  description: 'Execute dual communication protocol using the OrderID from the Excel
-    database: 1) Send professional confirmation email to dispatcher ({sender_email})
-    with comprehensive order and appointment details in table format including the
-    Excel-generated OrderID, truck plate, driver name, and fuel volume in gallons,
-    2) Send direct, mobile-friendly email to driver ({driver_email}) with essential
-    loading details and terminal location. Ensure both communications contain accurate
-    scheduling information and reference the OrderID from Master_Control_Orders.xlsx.'
-  expected_output: 'Confirmation of successful dual communications sent: professional
-    dispatcher confirmation email and mobile-friendly driver notification email, both
-    containing accurate appointment and location details.'
+  description: >
+    Ejecuta el protocolo de comunicación dual usando el OrderID: 
+    1) Email profesional al despachador ({sender_email}) con tabla de detalles del pedido y la cita. 
+    2) Email simplificado al chofer ({driver_email}) con la Isla asignada y la hora de carga. 
+    Ambos correos deben referenciar el OrderID generado.
+  expected_output: 'Confirmación de envío de correos a despachador y chofer.'
   agent: multi_channel_communications_manager
   context:
-  - excel_order_database_management
+    - excel_order_database_management

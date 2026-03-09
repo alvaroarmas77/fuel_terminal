@@ -1,6 +1,21 @@
-.env
+# Python (Archivos de ejecución y caché)
 __pycache__/
-*.pyc
-.streamlit/
+*.py[cod]
+*$py.class
+.env
 venv/
-.DS_Store
+env/
+
+# Excel y Archivos Temporales (Crucial para OneDrive)
+~$*.xlsx
+*.xlsm
+*.csv
+.ipynb_checkpoints
+
+# CrewAI y Logs
+*.log
+training_data.pkl
+
+# IDEs (VS Code, PyCharm)
+.vscode/
+.idea/
