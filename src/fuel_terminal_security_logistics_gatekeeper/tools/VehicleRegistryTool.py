@@ -44,7 +44,40 @@ class VehicleRegistryTool(BaseTool):
             storage = account.storage()
             drive = storage.get_default_drive()
             
-            # 2. Localización del archivo maestro
+            # 2. Localización y Descarga del archivo maestro
             try:
-                # Ruta relativa en OneDrive: Fuel_Terminal_System/Master_Control.xlsx
-                file_item
+                file_item = drive.get_item_by_path('Fuel_Terminal_System/Master_Control.xlsx')
+                content = file_item.download()
+            except Exception as e:
+                return f"ERROR_ARCHIVO: No se encontró 'Master_Control.xlsx' o error de descarga: {str(e)}"
+
+            # 3. Lectura y Normalización de Datos
+            df = pd.read_excel(io.BytesIO(content), sheet_name="Vehicle_Registry", engine='openpyxl')
+            
+            # Limpieza: quitamos espacios extra y estandarizamos a mayúsculas/minúsculas
+            df['Truck Plate'] = df['Truck Plate'].astype(str).str.strip().str.upper()
+            df['Driver Name'] = df['Driver Name'].astype(str).str.strip().str.lower()
+            
+            target_plate = truck_plate.strip().upper()
+            target_driver = driver_name.strip().lower()
+
+            # 4. Lógica de Validación (Búsqueda Exacta)
+            match = df[(df['Truck Plate'] == target_plate) & 
+                       (df['Driver Name'] == target_driver)]
+            
+            if not match.empty:
+                id_interno = match.iloc[0].get('ID_Interno', 'N/A')
+                status_permit = match.iloc[0].get('Status_Permit', 'Activo')
+                
+                if str(status_permit).upper() != "ACTIVO":
+                    return f"RECHAZADO: El vehículo {target_plate} tiene el permiso inactivo/vencido."
+
+                return (
+                    f"VALIDADO|ID:{id_interno}|Placa:{target_plate}|Conductor:{target_driver.title()}|"
+                    f"INFO: Registro encontrado y autorización confirmada para carga."
+                )
+            
+            return f"DENEGADO: La placa {target_plate} con el conductor {target_driver.title()} no figuran en el registro autorizado."
+
+        except Exception as e:
+            return f"ERROR_CRITICO_REGISTRO: Fallo inesperado en la validación de flota: {str(e)}"
