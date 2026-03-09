@@ -16,6 +16,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
+        # Configuración del modelo Gemini
         self.gemini_llm = "gemini/gemini-3.1-pro-preview"
 
     # --- AGENTES ---
@@ -23,7 +24,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def security_authentication_specialist(self) -> Agent:
         return Agent(
             config=self.agents_config['security_authentication_specialist'],
-            tools=[AccessControlTool()], # Instancia aquí
+            tools=[AccessControlTool()],
             llm=self.gemini_llm,
             verbose=True
         )
@@ -64,40 +65,40 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             verbose=True
         )
 
-    # --- TAREAS (Sin paréntesis en el agente) ---
+    # --- TAREAS (Instanciación explícita para satisfacer a Pydantic) ---
     @task
     def phase_1___user_authentication(self) -> Task:
         return Task(
-            config=self.tasks_config['phase_1___user_authentication']
-            #agent=self.security_authentication_specialist # SIN PARENTESIS
+            config=self.tasks_config['phase_1___user_authentication'],
+            agent=self.security_authentication_specialist()
         )
 
     @task
     def phase_2___registry_validation(self) -> Task:
         return Task(
-            config=self.tasks_config['phase_2___registry_validation']
-            #agent=self.registry_validation_specialist # SIN PARENTESIS
+            config=self.tasks_config['phase_2___registry_validation'],
+            agent=self.registry_validation_specialist()
         )
 
     @task
     def phase_3___intelligent_scheduling(self) -> Task:
         return Task(
-            config=self.tasks_config['phase_3___intelligent_scheduling']
-            #agent=self.intelligent_scheduling_coordinator # SIN PARENTESIS
+            config=self.tasks_config['phase_3___intelligent_scheduling'],
+            agent=self.intelligent_scheduling_coordinator()
         )
 
     @task
     def phase_4___order_logging(self) -> Task:
         return Task(
-            config=self.tasks_config['phase_4___order_logging']
-            #agent=self.order_logging_specialist # SIN PARENTESIS
+            config=self.tasks_config['phase_4___order_logging'],
+            agent=self.order_logging_specialist()
         )
 
     @task
     def phase_5___multi_channel_communications(self) -> Task:
         return Task(
-            config=self.tasks_config['phase_5___multi_channel_communications']
-            #agent=self.multi_channel_communications_manager # SIN PARENTESIS
+            config=self.tasks_config['phase_5___multi_channel_communications'],
+            agent=self.multi_channel_communications_manager()
         )
 
     @crew
