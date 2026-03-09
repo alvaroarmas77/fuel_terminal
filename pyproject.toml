@@ -1,11 +1,18 @@
 [project]
 name = "fuel_terminal_security_logistics_gatekeeper"
 version = "0.1.0"
-description = "fuel_terminal_security_logistics_gatekeeper using crewAI"
-authors = [{ name = "Your Name", email = "you@example.com" }]
+description = "Security and Logistics Gatekeeper for Fuel Terminal using crewAI"
+authors = [{ name = "Logistics Team", email = "admin@fuelterminal.com" }]
 requires-python = ">=3.10,<3.14"
+
 dependencies = [
-    "crewai[litellm,tools]==1.10.1",
+    "crewai[tools]==0.28.8",        # Versión estable para flujos industriales
+    "crewai-tools>=0.1.0",          # Necesario para que BaseTool funcione correctamente
+    "pydantic>=2.4.2",              # Fuerza el uso de Pydantic V2 (evita el error de BaseModel)
+    "pandas>=2.0.0",                # Requerido por tus herramientas de registro
+    "openpyxl>=3.1.0",              # Requerido para leer/escribir .xlsx
+    "msal>=1.20.0",                  # Autenticación de Microsoft Graph
+    "O365>=2.0.0",                  # Wrapper de Office 365 para OneDrive/Calendar
 ]
 
 [project.scripts]
