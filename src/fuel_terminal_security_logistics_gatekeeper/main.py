@@ -3,35 +3,36 @@ import os
 import warnings
 from datetime import datetime
 
-# --- PATH FIX: Esto permite que GitHub Actions encuentre tus archivos ---
-# Agregamos la carpeta 'src' al camino de búsqueda de Python
+# --- FIX DE RUTAS PARA GITHUB ACTIONS ---
+# Esto obliga a Python a reconocer la carpeta 'src' como raíz de módulos
 current_dir = os.path.dirname(os.path.abspath(__file__))
-src_path = os.path.abspath(os.path.join(current_dir, "../../"))
-if src_path not in sys.path:
-    sys.path.append(src_path)
-# -----------------------------------------------------------------------
+project_root = os.path.abspath(os.path.join(current_dir, "../../"))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
+# Importación segura de tu lógica
 try:
     from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
-except ModuleNotFoundError:
-    # Fallback si el nombre del módulo falla: importar directamente
-    from crew import FuelTerminalSecurityLogisticsGatekeeperCrew
+except ImportError:
+    import src.fuel_terminal_security_logistics_gatekeeper.crew as crew_mod
+    FuelTerminalSecurityLogisticsGatekeeperCrew = crew_mod.FuelTerminalSecurityLogisticsGatekeeperCrew
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 def run():
-    """Ejecuta la tripulación de la Terminal."""
+    """Punto de entrada para el Agente Gatekeeper"""
     inputs = {
         'current_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'terminal_location': 'Terminal Sur - Surquillo'
     }
     
-    print(f"### Iniciando Operaciones con Gemini 3.1 Pro Preview ###")
+    print(f"--- [SISTEMA INICIADO] - Modelo: Gemini 3.1 Pro Preview ---")
     try:
-        # Ejecución del Crew
+        # Iniciamos la tripulación
         FuelTerminalSecurityLogisticsGatekeeperCrew().crew().kickoff(inputs=inputs)
-        print("### Proceso completado con éxito ###")
+        print("--- [OPERACIÓN FINALIZADA] ---")
     except Exception as e:
-        print(f"Error en ejecución: {e}")
+        print(f"--- [ERROR CRÍTICO]: {e} ---")
         sys.exit(1)
 
 if __name__ == "__main__":

@@ -1,9 +1,9 @@
 import os
-from datetime import datetime
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
-# Importación de herramientas
+# Importación robusta de herramientas
+# Asegúrate de que todas tus clases en /tools/ hereden de 'from crewai_tools import BaseTool'
 try:
     from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
     from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool import VehicleRegistryTool
@@ -17,18 +17,25 @@ except ImportError:
 
 @CrewBase
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
-    """FuelTerminalSecurityLogisticsGatekeeper crew"""
+    """Lógica completa para el Gatekeeper de la Terminal de Combustible"""
 
-    # Definimos el modelo como un string directo (Gemini 3.1 Pro Preview)
-    # Esto evita el error de importación de la clase LLM
-    llm_terminal = "gemini/gemini-3.1-pro-preview"
+    # Rutas automáticas a los archivos YAML dentro de la carpeta config/
+    agents_config = 'config/agents.yaml'
+    tasks_config = 'config/tasks.yaml'
+
+    def __init__(self) -> None:
+        # Configuración del modelo Gemini 3.1 Pro Preview
+        # Se pasa como string para evitar errores de importación de la clase LLM
+        self.gemini_llm = "gemini/gemini-3.1-pro-preview"
+
+    # --- DEFINICIÓN DE AGENTES ---
 
     @agent
     def security_authentication_specialist(self) -> Agent:
         return Agent(
             config=self.agents_config['security_authentication_specialist'],
-            llm=self.llm_terminal,
             tools=[AccessControlTool()],
+            llm=self.gemini_llm,
             verbose=True,
             allow_delegation=False
         )
@@ -37,8 +44,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def registry_validation_specialist(self) -> Agent:
         return Agent(
             config=self.agents_config['registry_validation_specialist'],
-            llm=self.llm_terminal,
             tools=[VehicleRegistryTool()],
+            llm=self.gemini_llm,
             verbose=True,
             allow_delegation=False
         )
@@ -47,8 +54,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def intelligent_scheduling_coordinator(self) -> Agent:
         return Agent(
             config=self.agents_config['intelligent_scheduling_coordinator'],
-            llm=self.llm_terminal,
             tools=[OutlookCalendarTool()],
+            llm=self.gemini_llm,
             verbose=True,
             allow_delegation=False
         )
@@ -57,8 +64,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def order_logging_specialist(self) -> Agent:
         return Agent(
             config=self.agents_config['order_logging_specialist'],
-            llm=self.llm_terminal,
             tools=[OrderManagementTool()],
+            llm=self.gemini_llm,
             verbose=True,
             allow_delegation=False
         )
@@ -67,12 +74,14 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def multi_channel_communications_manager(self) -> Agent:
         return Agent(
             config=self.agents_config['multi_channel_communications_manager'],
-            llm=self.llm_terminal,
+            tools=[], # Este agente redacta basándose en la salida de los anteriores
+            llm=self.gemini_llm,
             verbose=True,
             allow_delegation=False
         )
 
-    # --- TAREAS ---
+    # --- DEFINICIÓN DE TAREAS ---
+
     @task
     def phase_1___user_authentication(self) -> Task:
         return Task(config=self.tasks_config['phase_1___user_authentication'])
@@ -93,8 +102,11 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def phase_5___multi_channel_communications(self) -> Task:
         return Task(config=self.tasks_config['phase_5___multi_channel_communications'])
 
+    # --- ENSAMBLAJE ---
+
     @crew
     def crew(self) -> Crew:
+        """Organiza la ejecución secuencial de los 5 especialistas"""
         return Crew(
             agents=self.agents,
             tasks=self.tasks,
