@@ -4,6 +4,7 @@ phase_1___user_authentication:
     Determinar si tiene permiso de entrada hoy {current_date}.
   expected_output: >
     Un estado de "Acceso Concedido" o "Acceso Denegado" con el nombre del conductor.
+  agent: security_authentication_specialist
 
 phase_2___registry_validation:
   description: >
@@ -11,6 +12,7 @@ phase_2___registry_validation:
     Verificar que el seguro y la inspección técnica estén al día.
   expected_output: >
     Resumen técnico del vehículo y confirmación de aptitud para carga.
+  agent: registry_validation_specialist
 
 phase_3___intelligent_scheduling:
   description: >
@@ -18,15 +20,18 @@ phase_3___intelligent_scheduling:
     Buscar un espacio disponible para la carga inmediata.
   expected_output: >
     Hora asignada y número de bahía de carga (ej: Bahía 04).
+  agent: intelligent_scheduling_coordinator
 
 phase_4___order_logging:
   description: >
     Generar el registro de la orden de combustible para el pedido {order_id}.
   expected_output: >
     Número de confirmación de orden y detalles del producto (Diesel/Gasolina).
-
+  agent: order_logging_specialist
+  
 phase_5___multi_channel_communications:
   description: >
     Compilar toda la información anterior en un mensaje claro para el despacho de logística.
   expected_output: >
     Un mensaje de texto/correo electrónico listo para ser enviado con el resumen de la operación.
+  agent:  multi_channel_communications_manager
