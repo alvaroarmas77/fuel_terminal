@@ -15,23 +15,18 @@ def run():
 
     # Mapeo exhaustivo para evitar KeyErrors en los archivos YAML
     inputs = {
-        # Identificadores de Conductor
         'driver_id': 'D-9876',
         'driver_name': 'Juan Pérez',
-        
-        # Identificadores de Vehículo (Mapeamos ambos para seguridad)
         'truck_plate': 'ABC-1234',
-        'plate_id': 'ABC-1234',  # <--- CORRECCIÓN PARA EL ERROR ACTUAL
-        
-        # Fechas y Horarios
+        'plate_id': 'ABC-1234',
         'requested_datetime': ahora.strftime('%Y-%m-%dT%H:%M:%S'),
         'current_date': ahora.strftime('%Y-%m-%d'),
-        
-        # Datos de Operación
         'fuel_volume': '5000 Gallons',
         'dispatcher_email': 'logistics@terminal-sur.com',
         'location': 'Terminal Sur - Surquillo',
-        'terminal_id': 'TERM-01'
+        'terminal_location': 'Terminal Sur - Surquillo', # <--- Crucial para Fase 3
+        'terminal_id': 'TERM-01',
+        'order_id': f"ORD-{ahora.strftime('%y%m%d%H%M')}" # <--- Crucial para Fase 4
     }
 
     try:

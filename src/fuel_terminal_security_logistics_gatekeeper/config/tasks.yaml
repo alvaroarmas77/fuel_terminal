@@ -1,37 +1,34 @@
 phase_1___user_authentication:
   description: >
     Recibir el ID del conductor {driver_id} y verificarlo usando AccessControlTool. 
-    Determinar si tiene permiso de entrada hoy {current_date}.
+    Determinar si tiene permiso de entrada hoy {current_date} en la ubicación {location}.
   expected_output: >
     Un estado de "Acceso Concedido" o "Acceso Denegado" con el nombre del conductor.
-  #agent: security_authentication_specialist
 
 phase_2___registry_validation:
   description: >
-    Validar la placa del vehículo {plate_id} en el registro oficial. 
+    Validar la placa del vehículo {plate_id} y el nombre {driver_name} en el registro oficial. 
     Verificar que el seguro y la inspección técnica estén al día.
   expected_output: >
     Resumen técnico del vehículo y confirmación de aptitud para carga.
-  #agent: registry_validation_specialist
 
 phase_3___intelligent_scheduling:
   description: >
     Consultar el calendario para la ubicación {terminal_location}. 
-    Buscar un espacio disponible para la carga inmediata.
+    Buscar un espacio disponible para la carga solicitada en {requested_datetime}.
   expected_output: >
     Hora asignada y número de bahía de carga (ej: Bahía 04).
-  #agent: intelligent_scheduling_coordinator
 
 phase_4___order_logging:
   description: >
-    Generar el registro de la orden de combustible para el pedido {order_id}.
+    Generar el registro de la orden de combustible para el ID de orden {order_id} 
+    con un volumen de {fuel_volume}.
   expected_output: >
     Número de confirmación de orden y detalles del producto (Diesel/Gasolina).
-  #agent: order_logging_specialist
 
 phase_5___multi_channel_communications:
   description: >
-    Compilar toda la información anterior en un mensaje claro para el despacho de logística.
+    Compilar toda la información (conductor, placa, isla y orden) en un mensaje 
+    profesional para el despacho en {dispatcher_email}.
   expected_output: >
-    Un mensaje de texto/correo electrónico listo para ser enviado con el resumen de la operación.
-  #agent:  multi_channel_communications_manager
+    Resumen de la operación enviado y confirmación de recepción.
