@@ -5,32 +5,30 @@ from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurit
 
 def run():
     """
-    Ejecuta la Crew de logística de la terminal con mapeo completo de variables.
+    Ejecuta la Crew de logística con validación estricta de Phase 1 a Phase 5.
     """
     ahora = datetime.now()
     
     print(f"\n--- [SISTEMA INICIADO] - {ahora.strftime('%Y-%m-%d %H:%M:%S')} ---")
     print("Ubicación: Terminal Sur - Surquillo")
-    print("Motor: Gemini 3.1 Pro Preview\n")
+    print("Protocolo: Validación de Usuario y Activos (Phase 1-5)\n")
 
-    # Mapeo exhaustivo para evitar KeyErrors en los archivos YAML
+    # Inputs normalizados para evitar fallos en las Tools
     inputs = {
-        'driver_id': 'D-9876',
-        'driver_name': 'Juan Pérez',
-        'truck_plate': 'ABC-1234',
-        'plate_id': 'ABC-1234',
-        'requested_datetime': ahora.strftime('%Y-%m-%dT%H:%M:%S'),
-        'current_date': ahora.strftime('%Y-%m-%d'),
+        'dispatcher_email': 'logistics@terminal-sur.com', # <--- Fase 1
+        'truck_plate': 'ABC-1234',                       # <--- Fase 2
+        'driver_name': 'Juan Pérez',                     # <--- Fase 2
+        'driver_id': 'D-9876',                           # <--- Fase 3 (SCTR)
         'fuel_volume': '5000 Gallons',
-        'dispatcher_email': 'logistics@terminal-sur.com',
+        'assigned_island': 'Island 4',
         'location': 'Terminal Sur - Surquillo',
-        'terminal_location': 'Terminal Sur - Surquillo', # <--- Crucial para Fase 3
-        'terminal_id': 'TERM-01',
-        'order_id': f"ORD-{ahora.strftime('%y%m%d%H%M')}" # <--- Crucial para Fase 4
+        'start_time': ahora.strftime('%H:%M'),
+        'end_time': (ahora).strftime('%H:%M'), # Puedes ajustar esto
+        'current_date': ahora.strftime('%Y-%m-%d')
     }
 
     try:
-        # Instancia de la Crew corregida
+        # Instancia de la Crew
         gatekeeper_crew = FuelTerminalSecurityLogisticsGatekeeperCrew().crew()
         
         # Inicio de la ejecución
@@ -40,10 +38,8 @@ def run():
         print(f"Resultado Final:\n{result}")
 
     except Exception as e:
-        # Captura de errores para el runner de GitHub
         print(f"\n[ERROR CRÍTICO DURANTE LA EJECUCIÓN]:\n{str(e)}")
         sys.exit(1)
 
 if __name__ == "__main__":
     run()
-# Prueba de ejecución holística 01

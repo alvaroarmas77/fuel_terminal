@@ -10,14 +10,15 @@ except ImportError:
 
 class OrderManagementTool(BaseTool):
     name: str = "order_management_tool"
-    description: str = "Registra la orden final en Master_Control_Orders.xlsx en la carpeta Fuel_Terminal_System."
+    description: str = "Registra físicamente la orden en Master_Control_Orders.xlsx en OneDrive."
 
     def _run(self, dispatcher_email: str, truck_plate: str, driver_name: str, fuel_volume: str, assigned_island: str, start_time: str, end_time: str) -> str:
         try:
             account = get_ms_account()
             drive = account.storage().get_default_drive()
-            
-            file_item = drive.get_item_by_path('Fuel_Terminal_System/Master_Control_Orders.xlsx')
+            root = drive.get_root()
+            folder = root.get_item('Fuel_Terminal_System')
+            file_item = folder.get_item('Master_Control_Orders.xlsx')
 
             content = file_item.download()
             df = pd.read_excel(io.BytesIO(content), engine='openpyxl')
@@ -38,6 +39,6 @@ class OrderManagementTool(BaseTool):
             output.seek(0)
             file_item.update_contents(output.read())
             
-            return f"ÉXITO: Orden {order_id} registrada para placa {truck_plate}."
+            return f"ÉXITO: Orden {order_id} registrada físicamente en OneDrive."
         except Exception as e:
-            return f"ERROR_LOGGING: {str(e)}"
+            return f"ERROR_SISTEMA: Fallo al registrar la orden. Detalle: {str(e)}"

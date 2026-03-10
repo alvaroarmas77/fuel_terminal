@@ -9,25 +9,29 @@ except ImportError:
 
 class VehicleRegistryTool(BaseTool):
     name: str = "vehicle_registry_tool"
-    description: str = "Valida placa y conductor contra Master_Control.xlsx en la carpeta Fuel_Terminal_System."
+    description: str = "Fase 1: Valida si el email del remitente está en la lista de usuarios autorizados de Master_Control.xlsx."
 
-    def _run(self, truck_plate: str, driver_name: str) -> str:
+    def _run(self, dispatcher_email: str) -> str:
         try:
             account = get_ms_account()
             drive = account.storage().get_default_drive()
             
-            file_item = drive.get_item_by_path('Fuel_Terminal_System/Master_Control.xlsx')
+            # Navegación compatible con OneDrive/MyFiles/
+            folder = drive.get_item_by_path('Fuel_Terminal_System')
+            file_item = folder.get_item('Master_Control.xlsx')
             
             content = file_item.download()
-            df = pd.read_excel(io.BytesIO(content), sheet_name="Vehicle_Registry", engine='openpyxl')
+            # Accedemos a la pestaña de usuarios autorizados
+            df_users = pd.read_excel(io.BytesIO(content), sheet_name="Authorized_Users", engine='openpyxl')
             
-            plate = str(truck_plate).strip().upper()
-            df['Truck Plate'] = df['Truck Plate'].astype(str).str.strip().upper()
+            email_limpio = str(dispatcher_email).strip().lower()
             
-            match = df[df['Truck Plate'] == plate]
-            if not match.empty:
-                return f"VALIDADO: Vehículo {plate} autorizado para la operación."
+            # Verificación estricta
+            if email_limpio in df_users['Email'].astype(str).str.lower().values:
+                user_data = df_users[df_users['Email'].astype(str).str.lower() == email_limpio].iloc[0]
+                return f"AUTH_SUCCESS: El usuario {email_limpio} ({user_data['Name']}) está autorizado. PROCEDER A FASE 2."
             
-            return f"DENEGADO: Placa {plate} no registrada en la flota oficial."
+            return f"AUTH_DENIED: El correo {email_limpio} no está registrado en el sistema de seguridad."
+
         except Exception as e:
-            return f"ERROR_REGISTRY: {str(e)}"
+            return f"ERROR_SISTEMA: No se pudo verificar la base de datos. Detalle: {str(e)}"

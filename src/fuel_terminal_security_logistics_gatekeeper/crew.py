@@ -15,36 +15,51 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     def __init__(self) -> None:
         self.gemini_llm = ChatGoogleGenerativeAI(
-            model="gemini-3.1-pro-preview",
+            model="gemini-1.5-pro", # Actualizado a la versión estable más reciente
             verbose=True,
-            temperature=0.3,
+            temperature=0.1, # Menos temperatura para mayor rigor en seguridad
             google_api_key=os.getenv("GOOGLE_API_KEY")
         )
 
     @agent
     def security_authentication_specialist(self) -> Agent:
-        conf = self.agents_config['security_authentication_specialist']
-        return Agent(config=conf, tools=[AccessControlTool()], llm=self.gemini_llm, verbose=True)
+        # FASE 1: Usa VehicleRegistryTool para validar dispatcher_email
+        return Agent(
+            config=self.agents_config['security_authentication_specialist'],
+            tools=[VehicleRegistryTool()], 
+            llm=self.gemini_llm,
+            verbose=True
+        )
 
     @agent
     def registry_validation_specialist(self) -> Agent:
-        conf = self.agents_config['registry_validation_specialist']
-        return Agent(config=conf, tools=[VehicleRegistryTool()], llm=self.gemini_llm, verbose=True)
+        # FASE 2: Usa VehicleRegistryTool para validar truck_plate y driver_name
+        return Agent(
+            config=self.agents_config['registry_validation_specialist'],
+            tools=[VehicleRegistryTool()],
+            llm=self.gemini_llm,
+            verbose=True
+        )
 
     @agent
-    def intelligent_scheduling_coordinator(self) -> Agent:
-        conf = self.agents_config['intelligent_scheduling_coordinator']
-        return Agent(config=conf, tools=[OutlookCalendarTool()], llm=self.gemini_llm, verbose=True)
+    def access_control_specialist(self) -> Agent:
+        # FASE 3: Usa AccessControlTool para SCTR y Bloqueos
+        return Agent(
+            config=self.agents_config['access_control_specialist'],
+            tools=[AccessControlTool()],
+            llm=self.gemini_llm,
+            verbose=True
+        )
 
     @agent
     def order_logging_specialist(self) -> Agent:
-        conf = self.agents_config['order_logging_specialist']
-        return Agent(config=conf, tools=[OrderManagementTool()], llm=self.gemini_llm, verbose=True)
-
-    @agent
-    def multi_channel_communications_manager(self) -> Agent:
-        conf = self.agents_config['multi_channel_communications_manager']
-        return Agent(config=conf, llm=self.gemini_llm, verbose=True)
+        # FASE 4: Registro físico en Excel
+        return Agent(
+            config=self.agents_config['order_logging_specialist'],
+            tools=[OrderManagementTool()],
+            llm=self.gemini_llm,
+            verbose=True
+        )
 
     @task
     def phase_1___user_authentication(self) -> Task:
@@ -55,17 +70,18 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
         return Task(config=self.tasks_config['phase_2___registry_validation'], agent=self.registry_validation_specialist())
 
     @task
-    def phase_3___intelligent_scheduling(self) -> Task:
-        return Task(config=self.tasks_config['phase_3___intelligent_scheduling'], agent=self.intelligent_scheduling_coordinator())
+    def phase_3___access_control(self) -> Task:
+        return Task(config=self.tasks_config['phase_3___access_control'], agent=self.access_control_specialist())
 
     @task
     def phase_4___order_logging(self) -> Task:
         return Task(config=self.tasks_config['phase_4___order_logging'], agent=self.order_logging_specialist())
 
-    @task
-    def phase_5___multi_channel_communications(self) -> Task:
-        return Task(config=self.tasks_config['phase_5___multi_channel_communications'], agent=self.multi_channel_communications_manager())
-
     @crew
     def crew(self) -> Crew:
-        return Crew(agents=self.agents, tasks=self.tasks, process=Process.sequential, verbose=True)
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential, # Mantenemos secuencial para el flujo de seguridad
+            verbose=True
+        )

@@ -14,11 +14,11 @@ class AccessControlTool(BaseTool):
     def _run(self, driver_id: str, terminal_id: str = "Terminal Sur") -> str:
         try:
             account = get_ms_account()
+            # Navegación directa: Root -> Carpeta -> Archivo
             drive = account.storage().get_default_drive()
-            
-            # Buscamos el archivo directamente por su ruta relativa al root
-            # En la librería O365, get_item_by_path es la forma más estable
-            file_item = drive.get_item_by_path('Fuel_Terminal_System/Security_Database.xlsx')
+            root = drive.get_root()
+            folder = root.get_item('Fuel_Terminal_System')
+            file_item = folder.get_item('Security_Database.xlsx')
             
             content = file_item.download()
             df = pd.read_excel(io.BytesIO(content), sheet_name="Security_Status", engine='openpyxl')
@@ -35,4 +35,4 @@ class AccessControlTool(BaseTool):
 
             return f"DENEGADO: ID {did} no figura en la base de seguridad."
         except Exception as e:
-            return f"ERROR_SECURITY: No se pudo acceder al archivo. Verifique la carpeta Fuel_Terminal_System. Detalle: {str(e)}"
+            return f"ERROR_SISTEMA: No se pudo localizar el archivo en la ruta especificada. Detalle: {str(e)}"
