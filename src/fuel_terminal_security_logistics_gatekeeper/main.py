@@ -4,41 +4,38 @@ from datetime import datetime
 from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
 
 def run():
-    """
-    Ejecuta la Crew de logística con validación estricta de Phase 1 a Phase 5.
-    """
     ahora = datetime.now()
     
-    print(f"\n--- [SISTEMA INICIADO] - {ahora.strftime('%Y-%m-%d %H:%M:%S')} ---")
-    print("Ubicación: Terminal Sur - Surquillo")
-    print("Protocolo: Validación de Usuario y Activos (Phase 1-5)\n")
-
-    # Inputs normalizados para evitar fallos en las Tools
+    # Mapeo exhaustivo de variables según tus archivos de configuración
     inputs = {
-        'dispatcher_email': 'logistics@terminal-sur.com', # <--- Fase 1
-        'truck_plate': 'ABC-1234',                       # <--- Fase 2
-        'driver_name': 'Juan Pérez',                     # <--- Fase 2
-        'driver_id': 'D-9876',                           # <--- Fase 3 (SCTR)
-        'fuel_volume': '5000 Gallons',
-        'assigned_island': 'Island 4',
+        # Para Phase 1 y 2
+        'driver_id': 'D-9876',
+        'driver_name': 'Juan Pérez',
+        'driver_email': 'juan.perez@transporte.com',
+        'dispatcher_email': 'logistics@terminal-sur.com',
+        'sender_email': 'logistics@terminal-sur.com',
+        
+        # Para Phase 2 y 3 (Se incluyen ambos nombres por consistencia en los YAML)
+        'plate_id': 'ABC-1234',
+        'truck_plate': 'ABC-1234',
+        
+        # Datos de tiempo y ubicación
+        'requested_datetime': ahora.strftime('%Y-%m-%dT%H:%00:00'), # Slots de 30 min aprox
+        'current_date': ahora.strftime('%Y-%m-%d'),
         'location': 'Terminal Sur - Surquillo',
-        'start_time': ahora.strftime('%H:%M'),
-        'end_time': (ahora).strftime('%H:%M'), # Puedes ajustar esto
-        'current_date': ahora.strftime('%Y-%m-%d')
+        'terminal_location': 'Terminal Sur - Surquillo',
+        
+        # Datos de Orden
+        'fuel_volume': '5000 Gallons',
+        'order_id': f"ORD-{ahora.strftime('%y%m%d%H%M')}"
     }
 
     try:
-        # Instancia de la Crew
         gatekeeper_crew = FuelTerminalSecurityLogisticsGatekeeperCrew().crew()
-        
-        # Inicio de la ejecución
         result = gatekeeper_crew.kickoff(inputs=inputs)
-
-        print("\n--- [EJECUCIÓN FINALIZADA CON ÉXITO] ---")
-        print(f"Resultado Final:\n{result}")
-
+        print(f"\n--- [RESULTADO FINAL] ---\n{result}")
     except Exception as e:
-        print(f"\n[ERROR CRÍTICO DURANTE LA EJECUCIÓN]:\n{str(e)}")
+        print(f"\n[ERROR CRÍTICO]: {str(e)}")
         sys.exit(1)
 
 if __name__ == "__main__":

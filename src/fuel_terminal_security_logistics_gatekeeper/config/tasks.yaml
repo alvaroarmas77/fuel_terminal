@@ -1,34 +1,46 @@
 phase_1___user_authentication:
   description: >
-    Recibir el ID del conductor {driver_id} y verificarlo usando AccessControlTool. 
-    Determinar si tiene permiso de entrada hoy {current_date} en la ubicación {location}.
+    Leer el archivo 'Master_control.xlsx' en la pestaña 'Authorized_Users'. 
+    Verificar si el correo del despachador {dispatcher_email} se encuentra en la columna 'Email'. 
+    Si el correo no está registrado, el sistema debe detenerse y retornar un mensaje explicando 
+    que no se puede continuar por no ser un usuario registrado. Si está presente, proceder a la Fase 2.
   expected_output: >
-    Un estado de "Acceso Concedido" o "Acceso Denegado" con el nombre del conductor.
+    Confirmación de "Acceso Concedido" con el nombre del usuario o mensaje de rechazo por usuario no registrado.
 
 phase_2___registry_validation:
   description: >
-    Validar la placa del vehículo {plate_id} y el nombre {driver_name} en el registro oficial. 
-    Verificar que el seguro y la inspección técnica estén al día.
+    Leer el archivo 'Master_control.xlsx' en la pestaña 'Vehicle_registry'. 
+    Validar la placa del vehículo {plate_id} y el nombre del conductor {driver_name} contra 
+    los encabezados 'Truck Plate' y 'Driver Name'. Verificar también que el seguro y la 
+    inspección técnica estén al día. Si algún dato no existe o no coincide, retornar un email 
+    explicando que no se puede continuar por falta de registro de activos.
   expected_output: >
-    Resumen técnico del vehículo y confirmación de aptitud para carga.
+    Resumen técnico del vehículo y confirmación de aptitud para carga o mensaje de error de activos.
 
 phase_3___access_control:
   description: >
-    Consultar el calendario para la ubicación {terminal_location}. 
-    Buscar un espacio disponible para la carga solicitada en {requested_datetime}.
+    Buscar en los 7 calendarios de Outlook (Islands 1-7) el slot solicitado en {requested_datetime}. 
+    Las citas deben ser en intervalos discretos de 30 minutos sin traslapes. 
+    Si el espacio está libre, reservarlo y proceder a la Fase 4. Si está ocupado, proponer 
+    los 3 siguientes espacios disponibles de 30 minutos en cualquiera de las islas. 
+    Usar la placa {plate_id} como referencia para mantener el hilo de la conversación.
   expected_output: >
-    Hora asignada y número de bahía de carga (ej: Bahía 04).
+    Resultado de programación mostrando "Slot Confirmado" con isla y detalles, o "Slot No Disponible" con 3 alternativas.
 
 phase_4___order_logging:
   description: >
-    Generar el registro de la orden de combustible para el ID de orden {order_id} 
-    con un volumen de {fuel_volume}.
+    Generar el registro físico de la orden de combustible para el ID {order_id} con un 
+    volumen de {fuel_volume} galones en la base de datos de órdenes. Asegurar que se 
+    vincule correctamente con la isla asignada en la fase anterior.
   expected_output: >
-    Número de confirmación de orden y detalles del producto (Diesel/Gasolina).
+    Número de confirmación de orden grabado en Excel y detalles del producto (Diesel/Gasolina).
 
 phase_5___multi_channel_communications:
   description: >
-    Compilar toda la información (conductor, placa, isla y orden) en un mensaje 
-    profesional para el despacho en {dispatcher_email}.
+    Ejecutar el protocolo dual de comunicación usando el {order_id}: 
+    1) Enviar correo profesional al despachador ({dispatcher_email}) con el resumen de la orden 
+    en formato de tabla (ID, placa, conductor, volumen y cita). 
+    2) Enviar correo optimizado para móviles al conductor ({driver_email}) con los detalles 
+    esenciales de carga y ubicación de la terminal ({location}).
   expected_output: >
-    Resumen de la operación enviado y confirmación de recepción.
+    Confirmación de envío de comunicaciones duales: correo profesional al despachador y notificación móvil al conductor.
