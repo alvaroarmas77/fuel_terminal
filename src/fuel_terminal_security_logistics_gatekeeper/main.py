@@ -5,7 +5,7 @@ from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurit
 
 def run():
     """
-    Ejecuta la Crew de logística de la terminal.
+    Ejecuta la Crew de logística de la terminal con mapeo completo de variables.
     """
     ahora = datetime.now()
     
@@ -13,26 +13,39 @@ def run():
     print("Ubicación: Terminal Sur - Surquillo")
     print("Motor: Gemini 3.1 Pro Preview\n")
 
-    # SOLUCIÓN: Añadimos 'current_date' que es lo que pide el tasks.yaml
+    # Mapeo exhaustivo para evitar KeyErrors en los archivos YAML
     inputs = {
+        # Identificadores de Conductor
         'driver_id': 'D-9876',
-        'truck_plate': 'ABC-1234',
         'driver_name': 'Juan Pérez',
+        
+        # Identificadores de Vehículo (Mapeamos ambos para seguridad)
+        'truck_plate': 'ABC-1234',
+        'plate_id': 'ABC-1234',  # <--- CORRECCIÓN PARA EL ERROR ACTUAL
+        
+        # Fechas y Horarios
         'requested_datetime': ahora.strftime('%Y-%m-%dT%H:%M:%S'),
-        'current_date': ahora.strftime('%Y-%m-%d'), # <--- ESTA ES LA KEY FALTANTE
+        'current_date': ahora.strftime('%Y-%m-%d'),
+        
+        # Datos de Operación
         'fuel_volume': '5000 Gallons',
-        'dispatcher_email': 'logistics@terminal-sur.com'
+        'dispatcher_email': 'logistics@terminal-sur.com',
+        'location': 'Terminal Sur - Surquillo',
+        'terminal_id': 'TERM-01'
     }
 
     try:
+        # Instancia de la Crew corregida
         gatekeeper_crew = FuelTerminalSecurityLogisticsGatekeeperCrew().crew()
+        
+        # Inicio de la ejecución
         result = gatekeeper_crew.kickoff(inputs=inputs)
 
         print("\n--- [EJECUCIÓN FINALIZADA CON ÉXITO] ---")
         print(f"Resultado Final:\n{result}")
 
     except Exception as e:
-        # Imprimimos el error limpio para depuración técnica
+        # Captura de errores para el runner de GitHub
         print(f"\n[ERROR CRÍTICO DURANTE LA EJECUCIÓN]:\n{str(e)}")
         sys.exit(1)
 
