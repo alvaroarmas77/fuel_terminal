@@ -7,20 +7,24 @@ from fuel_terminal_security_logistics_gatekeeper.tools.OrderManagementTool impor
 
 @CrewBase
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
-    """FuelTerminalSecurityLogisticsGatekeeper crew configurada con Gemini 3.1"""
+    """FuelTerminalSecurityLogisticsGatekeeper crew"""
     
+    # Rutas a los archivos de configuración
     agents_config = 'config/agents.yaml'
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        # Configuración explícita del motor solicitado
-        # Nota: Asegúrate de que la GOOGLE_API_KEY tenga acceso a la versión Preview
+        # Motor solicitado: Gemini 3.1 Pro Preview
         self.gemini_llm = "gemini/gemini-3.1-pro-preview"
 
     @agent
     def security_authentication_specialist(self) -> Agent:
+        # Extraemos la configuración manualmente para evitar el error de validación de dict a BaseModel
+        config = self.agents_config['security_authentication_specialist']
         return Agent(
-            config=self.agents_config['security_authentication_specialist'],
+            role=config['role'],
+            goal=config['goal'],
+            backstory=config['backstory'],
             tools=[AccessControlTool()],
             llm=self.gemini_llm,
             verbose=True,
@@ -29,8 +33,11 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @agent
     def registry_validation_specialist(self) -> Agent:
+        config = self.agents_config['registry_validation_specialist']
         return Agent(
-            config=self.agents_config['registry_validation_specialist'],
+            role=config['role'],
+            goal=config['goal'],
+            backstory=config['backstory'],
             tools=[VehicleRegistryTool()],
             llm=self.gemini_llm,
             verbose=True,
@@ -39,8 +46,11 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @agent
     def intelligent_scheduling_coordinator(self) -> Agent:
+        config = self.agents_config['intelligent_scheduling_coordinator']
         return Agent(
-            config=self.agents_config['intelligent_scheduling_coordinator'],
+            role=config['role'],
+            goal=config['goal'],
+            backstory=config['backstory'],
             tools=[OutlookCalendarTool()],
             llm=self.gemini_llm,
             verbose=True,
@@ -49,8 +59,11 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @agent
     def order_logging_specialist(self) -> Agent:
+        config = self.agents_config['order_logging_specialist']
         return Agent(
-            config=self.agents_config['order_logging_specialist'],
+            role=config['role'],
+            goal=config['goal'],
+            backstory=config['backstory'],
             tools=[OrderManagementTool()],
             llm=self.gemini_llm,
             verbose=True,
@@ -87,9 +100,10 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @crew
     def crew(self) -> Crew:
+        """Crea la Crew de logística de terminal"""
         return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
+            agents=self.agents, # Los agentes creados por los decoradores @agent
+            tasks=self.tasks,   # Las tareas creadas por los decoradores @task
             process=Process.sequential,
             verbose=True
         )

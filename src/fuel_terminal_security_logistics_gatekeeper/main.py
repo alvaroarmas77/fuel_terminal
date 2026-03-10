@@ -1,56 +1,64 @@
+#!/usr/bin/env python
 import sys
 import os
-import warnings
 from datetime import datetime
-
-# Desactivar advertencias de Pydantic v1/v2 para un log limpio
-warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
-
-# --- GESTIÓN DE RUTAS ---
-current_dir = os.path.dirname(os.path.abspath(__file__))
-src_path = os.path.abspath(os.path.join(current_dir, ".."))
-
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
-
 from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
 
 def run():
-    """Ejecución principal del Gatekeeper con inputs completos"""
-    
-    # IMPORTANTE: Estos inputs deben coincidir con las variables {llave} en agents.yaml y tasks.yaml
+    """
+    Ejecuta la Crew de logística de la terminal.
+    """
+    print(f"\n--- [SISTEMA INICIADO] - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---")
+    print("Ubicación: Terminal Sur - Surquillo")
+    print("Motor: Gemini 3.1 Pro Preview\n")
+
+    # Definición de inputs de forma explícita
+    # Estos valores alimentan las variables {driver_id}, {truck_plate}, etc. en tasks.yaml
     inputs = {
-        'current_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'terminal_location': 'Terminal Sur - Surquillo',
-        # Inputs dinámicos que los agentes necesitan para sus herramientas:
-        'driver_id': 'D-9876', 
-        'driver_name': 'Juan Perez',
+        'driver_id': 'D-9876',
         'truck_plate': 'ABC-1234',
+        'driver_name': 'Juan Pérez',
         'requested_datetime': datetime.now().isoformat(),
-        'fuel_volume': '5000 Gal'
+        'fuel_volume': '5000 Gallons',
+        'dispatcher_email': 'logistics@terminal-sur.com'
     }
-    
-    print(f"\n--- [SISTEMA INICIADO] - {inputs['current_date']} ---")
-    print(f"Ubicación: {inputs['terminal_location']}")
-    print(f"Motor: Gemini 3.1 Pro Preview\n")
 
     try:
         # Instanciamos la clase de la Crew
-        crew_instance = FuelTerminalSecurityLogisticsGatekeeperCrew()
+        # El método .crew() retorna la instancia de CrewAI ya validada
+        gatekeeper_crew = FuelTerminalSecurityLogisticsGatekeeperCrew().crew()
         
-        # Obtenemos el objeto Crew llamando al método .crew()
-        gatekeeper_crew = crew_instance.crew()
-        
-        # Ejecutamos con los inputs validados
+        # Iniciamos el proceso
         result = gatekeeper_crew.kickoff(inputs=inputs)
-        
-        print("\n--- [OPERACIÓN FINALIZADA CON ÉXITO] ---")
-        print(f"Resultado: {result}")
-        return result
+
+        print("\n--- [EJECUCIÓN FINALIZADA CON ÉXITO] ---")
+        print(f"Resultado Final:\n{result}")
 
     except Exception as e:
-        print(f"\n--- [ERROR CRÍTICO DURANTE LA EJECUCIÓN]:\n{str(e)}\n---")
+        print(f"\n[ERROR CRÍTICO DURANTE LA EJECUCIÓN]:\n{str(e)}")
+        # Forzamos la salida con error para que GitHub Actions lo marque como fallido
         sys.exit(1)
+
+def train():
+    """
+    Entrena la crew para mejorar la precisión (opcional).
+    """
+    inputs = {
+        'driver_id': 'D-9876',
+        'truck_plate': 'ABC-1234',
+        'driver_name': 'Juan Pérez',
+        'requested_datetime': datetime.now().isoformat(),
+        'fuel_volume': '5000 Gallons',
+        'dispatcher_email': 'logistics@terminal-sur.com'
+    }
+    try:
+        FuelTerminalSecurityLogisticsGatekeeperCrew().crew().train(
+            n_iterations=int(sys.argv[1]) if len(sys.argv) > 1 else 5, 
+            filename='training_data.pkl', 
+            inputs=inputs
+        )
+    except Exception as e:
+        raise Exception(f"Error durante el entrenamiento: {e}")
 
 if __name__ == "__main__":
     run()
