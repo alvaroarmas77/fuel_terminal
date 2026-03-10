@@ -1,29 +1,56 @@
+import pandas as pd
+import io
 from crewai_tools import BaseTool
-from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
+try:
+    from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
+except ImportError:
+    def get_ms_account(): return None
 
 class AccessControlTool(BaseTool):
     name: str = "access_control_tool"
-    description: str = (
-        "Consulta la base de datos de seguridad para validar permisos de entrada, "
-        "vigencia de seguro SCTR y estado administrativo del conductor usando su ID."
-    )
+    description: str = "Verifica ID de conductor, SCTR y bloqueos en Security_Database.xlsx."
 
-    def _run(self, driver_id: str, terminal_id: str = "TERM-01") -> str:
+    def _run(self, driver_id: str, terminal_id: str = "Terminal Sur") -> str:
         try:
-            driver_id = driver_id.strip().upper()
-            registros_seguridad = {
-                "D-9876": {"nombre": "Juan Pérez", "status": "Activo", "sctr_vence": "2026-12-31"},
-                "D-5555": {"nombre": "Maria Lopez", "status": "Activo", "sctr_vence": "2026-06-15"},
-                "D-1111": {"nombre": "Carlos Ruiz", "status": "Bloqueado", "sctr_vence": "2026-01-01"}
-            }
+            account = get_ms_account()
+            if not account: return "ERROR: Fallo de autenticación MS Graph."
+            
+            drive = account.storage().get_default_drive()
+            # RUTA ABSOLUTA CORREGIDA
+            file_path = '/Fuel_Terminal_System/Security_Database.xlsx'
+            
+            try:
+                file_item = drive.get_item_by_path(file_path)
+            except Exception:
+                return f"ERROR_RUTA: No se halló {file_path} en OneDrive."
 
-            if driver_id not in registros_seguridad:
-                return f"ERROR: El ID {driver_id} no existe en el sistema."
+            content = file_item.download()
+            df = pd.read_excel(io.BytesIO(content), sheet_name="Security_Status", engine='openpyxl')
+            
+            did = str(driver_id).strip().upper()
+            df['Driver_ID'] = df['Driver_ID'].astype(str).str.strip().upper()
+            
+            # Buscamos al conductor
+            match = df[df['Driver_ID'] == did]
+            
+            if not match.empty:
+                nombre = match['Name'].values[0]
+                sctr = str(match['SCTR_Status'].values[0]).upper()
+                bloqueo = str(match['Blocked'].values[0]).upper()
+                
+                if bloqueo == 'YES' or bloqueo == 'SI':
+                    return f"DENEGADO: El conductor {nombre} tiene un BLOQUEO ADMINISTRATIVO."
+                
+                if sctr != 'VALIDO' and sctr != 'VALID':
+                    return f"DENEGADO: SCTR de {nombre} vencido o no cargado."
+                
+                return f"CONFIRMACIÓN: Acceso Autorizado para {nombre} en {terminal_id}."
 
-            datos = registros_seguridad[driver_id]
-            if datos["status"] == "Bloqueado":
-                return f"ALERTA: Acceso Denegado. {datos['nombre']} tiene un bloqueo administrativo."
+            return f"DENEGADO: ID {did} no encontrado en la base de seguridad."
 
-            return f"CONFIRMACIÓN: Acceso Autorizado para {datos['nombre']} en {terminal_id}."
         except Exception as e:
-            return f"ERROR_TOOL: {str(e)}"
+            return f"ERROR_SECURITY: {str(e)}"
