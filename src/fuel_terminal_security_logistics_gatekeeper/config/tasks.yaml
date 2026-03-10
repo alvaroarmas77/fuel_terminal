@@ -12,7 +12,7 @@ phase_2___registry_validation:
   expected_output: >
     Resumen técnico del vehículo y confirmación de aptitud para carga.
 
-phase_3___intelligent_scheduling:
+phase_3___access_control:
   description: >
     Consultar el calendario para la ubicación {terminal_location}. 
     Buscar un espacio disponible para la carga solicitada en {requested_datetime}.
