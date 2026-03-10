@@ -15,7 +15,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     def __init__(self) -> None:
         self.gemini_llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-pro",
+            model="gemini-3.1-pro-preview",
             temperature=0.1,
             google_api_key=os.getenv("GOOGLE_API_KEY")
         )
