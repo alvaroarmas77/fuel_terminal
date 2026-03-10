@@ -1,5 +1,7 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
+
+# Importación de las herramientas simplificadas (sin args_schema)
 from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
 from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool import VehicleRegistryTool
 from fuel_terminal_security_logistics_gatekeeper.tools.OutlookCalendarTool import OutlookCalendarTool
@@ -7,25 +9,23 @@ from fuel_terminal_security_logistics_gatekeeper.tools.OrderManagementTool impor
 
 @CrewBase
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
-    """FuelTerminalSecurityLogisticsGatekeeper crew"""
-    
-    # Rutas a los archivos de configuración
+    """FuelTerminalSecurityLogisticsGatekeeper crew - Versión Estabilizada"""
+
     agents_config = 'config/agents.yaml'
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        # Motor solicitado: Gemini 3.1 Pro Preview
+        # Motor solicitado por defecto
         self.gemini_llm = "gemini/gemini-3.1-pro-preview"
 
     @agent
     def security_authentication_specialist(self) -> Agent:
-        # Extraemos la configuración manualmente para evitar el error de validación de dict a BaseModel
-        config = self.agents_config['security_authentication_specialist']
+        conf = self.agents_config['security_authentication_specialist']
         return Agent(
-            role=config['role'],
-            goal=config['goal'],
-            backstory=config['backstory'],
-            tools=[AccessControlTool()],
+            role=conf['role'],
+            goal=conf['goal'],
+            backstory=conf['backstory'],
+            tools=[AccessControlTool()], # Instancia limpia
             llm=self.gemini_llm,
             verbose=True,
             allow_delegation=False
@@ -33,11 +33,11 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @agent
     def registry_validation_specialist(self) -> Agent:
-        config = self.agents_config['registry_validation_specialist']
+        conf = self.agents_config['registry_validation_specialist']
         return Agent(
-            role=config['role'],
-            goal=config['goal'],
-            backstory=config['backstory'],
+            role=conf['role'],
+            goal=conf['goal'],
+            backstory=conf['backstory'],
             tools=[VehicleRegistryTool()],
             llm=self.gemini_llm,
             verbose=True,
@@ -46,11 +46,11 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @agent
     def intelligent_scheduling_coordinator(self) -> Agent:
-        config = self.agents_config['intelligent_scheduling_coordinator']
+        conf = self.agents_config['intelligent_scheduling_coordinator']
         return Agent(
-            role=config['role'],
-            goal=config['goal'],
-            backstory=config['backstory'],
+            role=conf['role'],
+            goal=conf['goal'],
+            backstory=conf['backstory'],
             tools=[OutlookCalendarTool()],
             llm=self.gemini_llm,
             verbose=True,
@@ -59,11 +59,11 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @agent
     def order_logging_specialist(self) -> Agent:
-        config = self.agents_config['order_logging_specialist']
+        conf = self.agents_config['order_logging_specialist']
         return Agent(
-            role=config['role'],
-            goal=config['goal'],
-            backstory=config['backstory'],
+            role=conf['role'],
+            goal=conf['goal'],
+            backstory=conf['backstory'],
             tools=[OrderManagementTool()],
             llm=self.gemini_llm,
             verbose=True,
@@ -100,10 +100,10 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @crew
     def crew(self) -> Crew:
-        """Crea la Crew de logística de terminal"""
+        """Crea la Crew final con proceso secuencial"""
         return Crew(
-            agents=self.agents, # Los agentes creados por los decoradores @agent
-            tasks=self.tasks,   # Las tareas creadas por los decoradores @task
+            agents=self.agents,
+            tasks=self.tasks,
             process=Process.sequential,
             verbose=True
         )
