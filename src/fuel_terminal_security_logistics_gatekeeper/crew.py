@@ -7,12 +7,14 @@ from fuel_terminal_security_logistics_gatekeeper.tools.OrderManagementTool impor
 
 @CrewBase
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
-    """FuelTerminalSecurityLogisticsGatekeeper crew"""
+    """FuelTerminalSecurityLogisticsGatekeeper crew configurada con Gemini 3.1"""
+    
     agents_config = 'config/agents.yaml'
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        # Usando Gemini 3.1 como solicitado
+        # Configuración explícita del motor solicitado
+        # Nota: Asegúrate de que la GOOGLE_API_KEY tenga acceso a la versión Preview
         self.gemini_llm = "gemini/gemini-3.1-pro-preview"
 
     @agent
