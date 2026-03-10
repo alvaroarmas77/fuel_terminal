@@ -1,8 +1,5 @@
-import os
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
-
-# Importaciones absolutas para evitar ambigüedad en el entorno del Runner
 from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
 from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool import VehicleRegistryTool
 from fuel_terminal_security_logistics_gatekeeper.tools.OutlookCalendarTool import OutlookCalendarTool
@@ -10,23 +7,21 @@ from fuel_terminal_security_logistics_gatekeeper.tools.OrderManagementTool impor
 
 @CrewBase
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
-    """Lógica completa para el Gatekeeper de la Terminal de Combustible"""
-
+    """FuelTerminalSecurityLogisticsGatekeeper crew for secure terminal logistics management."""
     agents_config = 'config/agents.yaml'
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        # Configuración del modelo Gemini
-        self.gemini_llm = "gemini/gemini-3.1-pro-preview"
+        self.gemini_llm = "gemini/gemini-1.5-flash"
 
-    # --- AGENTES ---
     @agent
     def security_authentication_specialist(self) -> Agent:
         return Agent(
             config=self.agents_config['security_authentication_specialist'],
             tools=[AccessControlTool()],
             llm=self.gemini_llm,
-            verbose=True
+            verbose=True,
+            allow_delegation=False
         )
 
     @agent
@@ -35,7 +30,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['registry_validation_specialist'],
             tools=[VehicleRegistryTool()],
             llm=self.gemini_llm,
-            verbose=True
+            verbose=True,
+            allow_delegation=False
         )
 
     @agent
@@ -44,7 +40,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['intelligent_scheduling_coordinator'],
             tools=[OutlookCalendarTool()],
             llm=self.gemini_llm,
-            verbose=True
+            verbose=True,
+            allow_delegation=False
         )
 
     @agent
@@ -53,19 +50,10 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['order_logging_specialist'],
             tools=[OrderManagementTool()],
             llm=self.gemini_llm,
-            verbose=True
+            verbose=True,
+            allow_delegation=False
         )
 
-    @agent
-    def multi_channel_communications_manager(self) -> Agent:
-        return Agent(
-            config=self.agents_config['multi_channel_communications_manager'],
-            tools=[], 
-            llm=self.gemini_llm,
-            verbose=True
-        )
-
-    # --- TAREAS (Instanciación explícita para satisfacer a Pydantic) ---
     @task
     def phase_1___user_authentication(self) -> Task:
         return Task(
@@ -92,13 +80,6 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
         return Task(
             config=self.tasks_config['phase_4___order_logging'],
             agent=self.order_logging_specialist()
-        )
-
-    @task
-    def phase_5___multi_channel_communications(self) -> Task:
-        return Task(
-            config=self.tasks_config['phase_5___multi_channel_communications'],
-            agent=self.multi_channel_communications_manager()
         )
 
     @crew
