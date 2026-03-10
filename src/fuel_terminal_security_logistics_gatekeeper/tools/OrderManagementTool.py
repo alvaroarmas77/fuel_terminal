@@ -2,7 +2,6 @@ import pandas as pd
 import io
 from datetime import datetime
 from typing import Type, Optional
-from crewai_tools import BaseTool
 from pydantic import BaseModel, Field
 
 try:
@@ -27,7 +26,6 @@ class OrderManagementTool(BaseTool):
 
     def _run(self, **kwargs) -> str:
         try:
-            # Simulación de registro exitoso en OneDrive
             order_id = f"ORD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
             return f"EXITO: Orden {order_id} registrada para el vehículo {kwargs.get('truck_plate')}."
         except Exception as e:

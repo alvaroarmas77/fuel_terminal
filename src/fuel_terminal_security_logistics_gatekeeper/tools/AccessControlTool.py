@@ -7,8 +7,8 @@ from crewai_tools import BaseTool
 
 class AccessControlInput(BaseModel):
     """Input schema para la validación de acceso de seguridad."""
-    driver_id: str = Field(..., description="El ID único del conductor para verificar en la base de datos.")
-    terminal_id: str = Field(default="TERM-01", description="ID de la terminal donde se solicita el acceso.")
+    driver_id: str = Field(..., description="ID único del conductor (ej. D-9876).")
+    terminal_id: str = Field(default="TERM-01", description="ID de la terminal de acceso.")
 
 class AccessControlTool(BaseTool):
     name: str = "access_control_tool"

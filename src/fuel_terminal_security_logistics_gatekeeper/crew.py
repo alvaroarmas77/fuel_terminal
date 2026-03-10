@@ -7,12 +7,13 @@ from fuel_terminal_security_logistics_gatekeeper.tools.OrderManagementTool impor
 
 @CrewBase
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
-    """FuelTerminalSecurityLogisticsGatekeeper crew for secure terminal logistics management."""
+    """FuelTerminalSecurityLogisticsGatekeeper crew"""
     agents_config = 'config/agents.yaml'
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        self.gemini_llm = "gemini/gemini-1.5-flash"
+        # Usando Gemini 3.1 como solicitado
+        self.gemini_llm = "gemini/gemini-3.1-pro-preview"
 
     @agent
     def security_authentication_specialist(self) -> Agent:
