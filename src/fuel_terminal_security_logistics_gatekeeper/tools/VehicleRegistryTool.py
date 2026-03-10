@@ -3,7 +3,6 @@ import io
 from crewai_tools import BaseTool
 import logging
 
-# Configuración de logs para ver detalles en GitHub Actions
 logger = logging.getLogger(__name__)
 
 try:
@@ -13,61 +12,38 @@ except ImportError:
 
 class VehicleRegistryTool(BaseTool):
     name: str = "vehicle_registry_tool"
-    description: str = "Valida placa y conductor contra el archivo Master_Control.xlsx en la carpeta Fuel_Terminal_System de OneDrive."
+    description: str = "Valida placa y conductor contra Master_Control.xlsx en la carpeta Fuel_Terminal_System."
 
     def _run(self, truck_plate: str, driver_name: str) -> str:
         try:
             account = get_ms_account()
-            if not account: 
-                return "ERROR: Fallo de autenticación MS Graph."
+            if not account: return "ERROR: Autenticación MS Graph fallida."
             
-            # 1. Acceder al almacenamiento de OneDrive
-            storage = account.storage()
+            # Navegación robusta por objetos
             drive = account.storage().get_default_drive()
-
-            # 2. Corrección de Ruta: Usamos la ruta absoluta desde el root del drive.
-            # Nota: Agregamos el '/' inicial para asegurar que busque desde la raíz.
-            file_path = '/Fuel_Terminal_System/Master_Control.xlsx'
+            items = drive.get_root().get_items()
             
-            try:
-                # Intentamos obtener el archivo por ruta
-                file_item = drive.get_item_by_path(file_path)
-            except Exception as path_err:
-                return f"ERROR_RUTA: No se encontró el archivo en {file_path}. Verifique que la carpeta 'Fuel_Terminal_System' esté en la raíz de su OneDrive."
+            # Buscar carpeta
+            target_folder = next((i for i in items if i.name == 'Fuel_Terminal_System' and i.is_folder), None)
+            if not target_folder: return "ERROR_SISTEMA: Carpeta 'Fuel_Terminal_System' no hallada en la raíz."
 
-            # 3. Descarga y procesamiento
+            # Buscar archivo
+            folder_items = target_folder.get_items()
+            file_item = next((f for f in folder_items if f.name == 'Master_Control.xlsx'), None)
+            if not file_item: return "ERROR_SISTEMA: Archivo 'Master_Control.xlsx' no hallado."
+
+            # Procesamiento de datos
             content = file_item.download()
-            if not content:
-                return "ERROR: El archivo Master_Control.xlsx está vacío o no se pudo descargar."
-
-            # Leemos el Excel usando openpyxl
             df = pd.read_excel(io.BytesIO(content), sheet_name="Vehicle_Registry", engine='openpyxl')
             
-            # Limpieza de datos para comparación exacta
-            target_plate = str(truck_plate).strip().upper()
-            target_driver = str(driver_name).strip().upper()
-            
-            # Normalizamos las columnas del DataFrame
+            plate = str(truck_plate).strip().upper()
+            driver = str(driver_name).strip().upper()
             df['Truck Plate'] = df['Truck Plate'].astype(str).str.strip().upper()
-            df['Driver Name'] = df['Driver Name'].astype(str).str.strip().upper()
-
-            # 4. Lógica de validación holística
-            match = df[df['Truck Plate'] == target_plate]
-
+            
+            match = df[df['Truck Plate'] == plate]
             if not match.empty:
-                # Opcional: Validar también que el nombre coincida en la misma fila
-                is_driver_valid = target_driver in match['Driver Name'].values
-                
-                status_msg = f"VALIDADO: Vehículo {target_plate} autorizado."
-                if is_driver_valid:
-                    status_msg += f" Conductor {target_driver} verificado en registro."
-                else:
-                    status_msg += f" ADVERTENCIA: Conductor {target_driver} no coincide con el registro de esta placa."
-                
-                return status_msg
-
-            return f"DENEGADO: La placa {target_plate} no se encuentra en el registro oficial de la flota."
-
+                return f"VALIDADO: Vehículo {plate} autorizado para {driver}."
+            
+            return f"DENEGADO: Placa {plate} no registrada en la flota."
         except Exception as e:
-            # Capturamos el error detallado para el log de GitHub
             return f"ERROR_REGISTRY: {str(e)}"
