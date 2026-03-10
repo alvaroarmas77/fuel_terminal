@@ -39,7 +39,7 @@ phase_4___order_logging:
 
 phase_5___multi_channel_communications:
   description: >
-    Ejecutar el protocolo dual de comunicación usando el {order_id}: 
+    Usar la herramienta 'communications_tool' para enviar los correos finales.
     1) Enviar correo profesional al despachador ({dispatcher_email}) con el resumen de la orden 
     en formato de tabla (ID, placa, conductor, volumen y cita). 
     2) Enviar correo optimizado para móviles a cada uno de los conductores ({driver_email}) con los detalles 

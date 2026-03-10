@@ -7,6 +7,7 @@ from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import 
 from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool import VehicleRegistryTool
 from fuel_terminal_security_logistics_gatekeeper.tools.OutlookCalendarTool import OutlookCalendarTool
 from fuel_terminal_security_logistics_gatekeeper.tools.OrderManagementTool import OrderManagementTool
+from fuel_terminal_security_logistics_gatekeeper.tools.CommunicationsTool import CommunicationsTool
 
 @CrewBase
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
@@ -22,7 +23,10 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @agent
     def security_authentication_specialist(self) -> Agent:
-        return Agent(config=self.agents_config['security_authentication_specialist'], tools=[VehicleRegistryTool()], llm=self.gemini_llm, verbose=True)
+        return Agent(
+            config=self.agents_config['security_authentication_specialist'], 
+            tools=[VehicleRegistryTool()], 
+            llm=self.gemini_llm, verbose=True)
 
     @agent
     def registry_validation_specialist(self) -> Agent:
@@ -38,7 +42,14 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @agent
     def multi_channel_communications_manager(self) -> Agent:
-        return Agent(config=self.agents_config['multi_channel_communications_manager'], llm=self.gemini_llm, verbose=True)
+        return Agent(
+            
+            config=self.agents_config['multi_channel_communications_manager'],
+        tools=[CommunicationsTool()], # <--- ASIGNAR LA HERRAMIENTA AQUÍ
+        verbose=True,
+        llm=self.gemini_llm
+        )
+    
 
     @task
     def phase_1___user_authentication(self) -> Task:

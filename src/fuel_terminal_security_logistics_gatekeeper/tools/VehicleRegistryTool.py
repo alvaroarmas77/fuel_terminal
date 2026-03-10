@@ -1,35 +1,45 @@
 import pandas as pd
 import io
+import sys
+import os
 from typing import Optional
 from crewai_tools import BaseTool
 
+# --- BLINDAJE DE IMPORTACIÓN ---
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 try:
-    from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
+    from utils.microsoft_graph import get_ms_account
 except ImportError:
-    def get_ms_account(): return None
+    try:
+        from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
+    except ImportError:
+        def get_ms_account(): return None
 
 class VehicleRegistryTool(BaseTool):
     name: str = "vehicle_registry_tool"
-    description: str = "Valida usuarios en 'Authorized_Users' y vehículos en 'Vehicle_Registry'."
+    description: str = "Valida usuarios en 'Authorized_Users' y vehículos en 'Vehicle_Registry' desde Master_Control.xlsx."
 
     def _run(self, dispatcher_email: Optional[str] = None, plate_id: Optional[str] = None, driver_name: Optional[str] = None) -> str:
+        account = get_ms_account()
+        if not account:
+            return "ERROR_CONEXIÓN: No se pudo obtener la cuenta de Microsoft. Verifica credenciales de Azure."
+        
         try:
-            account = get_ms_account()
             drive = account.storage().get_default_drive()
             folder = drive.get_root().get_item('Fuel_Terminal_System')
             file_item = folder.get_item('Master_Control.xlsx')
             content = file_item.download()
             
-            # FASE 1: Authorized_Users (Email, Nombre, Empresa)
-            if dispatcher_email and not plate_id:
+            # FASE 1: Authorized_Users
+            if dispatcher_email and (not plate_id or plate_id == "UNKNOWN"):
                 df = pd.read_excel(io.BytesIO(content), sheet_name="Authorized_Users", engine='openpyxl')
                 email_l = str(dispatcher_email).strip().lower()
                 if email_l in df['Email'].astype(str).str.lower().values:
                     user = df[df['Email'].astype(str).str.lower() == email_l].iloc[0]
-                    return f"PHASE_1_SUCCESS: {user['Nombre']} de {user['Empresa']} autorizado."
-                return f"RECHAZO_FASE_1: El email {email_l} no está en la lista autorizada."
+                    return f"PHASE_1_SUCCESS: {user['Nombre']} ({user['Empresa']}) autorizado."
+                return f"RECHAZO_FASE_1: El email {email_l} no está registrado."
 
-            # FASE 2: Vehicle_Registry (Truck Plate, Driver Name, Driver Email, ID_Interno)
+            # FASE 2: Vehicle_Registry
             if plate_id and driver_name:
                 df = pd.read_excel(io.BytesIO(content), sheet_name="Vehicle_Registry", engine='openpyxl')
                 p_limpia = str(plate_id).strip().upper()
@@ -39,9 +49,9 @@ class VehicleRegistryTool(BaseTool):
                            (df['Driver Name'].astype(str).str.lower() == d_limpio)]
                 
                 if not match.empty:
-                    return f"PHASE_2_SUCCESS: Vehículo {p_limpia} y conductor {driver_name} (ID: {match.iloc[0]['ID_Interno']}) validados."
-                return f"RECHAZO_FASE_2: El camión o el conductor no figuran en el registro oficial."
+                    return f"PHASE_2_SUCCESS: Camión {p_limpia} y conductor {driver_name} validados."
+                return "RECHAZO_FASE_2: Activos no encontrados en el registro oficial."
 
-            return "ERROR_PARAM: Faltan datos para validación."
+            return "ERROR_PARAM: Faltan datos para la validación solicitada."
         except Exception as e:
             return f"ERROR_SISTEMA: {str(e)}"
