@@ -10,19 +10,15 @@ except ImportError:
 
 class OrderManagementTool(BaseTool):
     name: str = "order_management_tool"
-    description: str = "Registra la orden final en Master_Control_Orders.xlsx en la nube."
+    description: str = "Registra la orden final en Master_Control_Orders.xlsx en la carpeta Fuel_Terminal_System."
 
     def _run(self, dispatcher_email: str, truck_plate: str, driver_name: str, fuel_volume: str, assigned_island: str, start_time: str, end_time: str) -> str:
         try:
             account = get_ms_account()
             drive = account.storage().get_default_drive()
-            items = drive.get_root().get_items()
             
-            target_folder = next((i for i in items if i.name == 'Fuel_Terminal_System' and i.is_folder), None)
-            folder_items = target_folder.get_items()
-            file_item = next((f for f in folder_items if f.name == 'Master_Control_Orders.xlsx'), None)
+            file_item = drive.get_item_by_path('Fuel_Terminal_System/Master_Control_Orders.xlsx')
 
-            # Leer, actualizar y subir
             content = file_item.download()
             df = pd.read_excel(io.BytesIO(content), engine='openpyxl')
             
