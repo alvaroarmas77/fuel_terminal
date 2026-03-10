@@ -1,7 +1,9 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
 
-# Importación de las herramientas simplificadas (sin args_schema)
+# Importación de las herramientas simplificadas (sin args_schema para evitar el error de Pydantic)
 from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
 from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool import VehicleRegistryTool
 from fuel_terminal_security_logistics_gatekeeper.tools.OutlookCalendarTool import OutlookCalendarTool
@@ -9,14 +11,19 @@ from fuel_terminal_security_logistics_gatekeeper.tools.OrderManagementTool impor
 
 @CrewBase
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
-    """FuelTerminalSecurityLogisticsGatekeeper crew - Versión Estabilizada"""
+    """FuelTerminalSecurityLogisticsGatekeeper crew - Versión Estabilizada con Gemini 3.1"""
 
     agents_config = 'config/agents.yaml'
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        # Motor solicitado por defecto
-        self.gemini_llm = "gemini/gemini-3.1-pro-preview"
+        # Forzamos el uso de gemini-3.1-pro-preview como objeto LLM
+        self.gemini_llm = ChatGoogleGenerativeAI(
+            model="gemini-3.1-pro-preview",
+            verbose=True,
+            temperature=0.3,
+            google_api_key=os.getenv("GOOGLE_API_KEY")
+        )
 
     @agent
     def security_authentication_specialist(self) -> Agent:
@@ -25,7 +32,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             role=conf['role'],
             goal=conf['goal'],
             backstory=conf['backstory'],
-            tools=[AccessControlTool()], # Instancia limpia
+            tools=[AccessControlTool()],
             llm=self.gemini_llm,
             verbose=True,
             allow_delegation=False
@@ -100,7 +107,6 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @crew
     def crew(self) -> Crew:
-        """Crea la Crew final con proceso secuencial"""
         return Crew(
             agents=self.agents,
             tasks=self.tasks,
