@@ -29,18 +29,20 @@ phase_3___access_control:
 
 phase_4___order_logging:
   description: >
-    Generar el registro físico de la orden de combustible para el ID {order_id} con un 
-    volumen de {fuel_volume} galones en la base de datos de órdenes. Asegurar que se 
-    vincule correctamente con la isla asignada en la fase anterior.
+    Tomar el ID de orden {order_id}, el volumen {fuel_volume} y los detalles de la cita 
+    confirmados en la Fase 3 (Isla asignada, Fecha de cita, Hora de inicio y Hora de fin). 
+    Usar la herramienta 'order_management_tool' para registrar físicamente estos datos 
+    en el archivo 'Master_Control_Orders.xlsx'.
   expected_output: >
-    Número de confirmación de orden grabado en Excel y detalles del producto (Diesel/Gasolina).
+    Confirmación de que la fila con todos los campos técnicos (incluyendo tiempos y isla) 
+    ha sido escrita en el registro de órdenes.
 
 phase_5___multi_channel_communications:
   description: >
     Ejecutar el protocolo dual de comunicación usando el {order_id}: 
     1) Enviar correo profesional al despachador ({dispatcher_email}) con el resumen de la orden 
     en formato de tabla (ID, placa, conductor, volumen y cita). 
-    2) Enviar correo optimizado para móviles al conductor ({driver_email}) con los detalles 
+    2) Enviar correo optimizado para móviles a cada uno de los conductores ({driver_email}) con los detalles 
     esenciales de carga y ubicación de la terminal ({location}).
   expected_output: >
     Confirmación de envío de comunicaciones duales: correo profesional al despachador y notificación móvil al conductor.

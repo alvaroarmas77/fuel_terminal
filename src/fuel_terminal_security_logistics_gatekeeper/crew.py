@@ -20,14 +20,13 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             google_api_key=os.getenv("GOOGLE_API_KEY")
         )
 
-    # Agentes basados en tu agents.yaml
     @agent
     def security_authentication_specialist(self) -> Agent:
         return Agent(config=self.agents_config['security_authentication_specialist'], tools=[VehicleRegistryTool()], llm=self.gemini_llm, verbose=True)
 
     @agent
     def registry_validation_specialist(self) -> Agent:
-        return Agent(config=self.agents_config['registry_validation_specialist'], tools=[VehicleRegistryTool()], llm=self.gemini_llm, verbose=True)
+        return Agent(config=self.agents_config['registry_validation_specialist'], tools=[VehicleRegistryTool(), AccessControlTool()], llm=self.gemini_llm, verbose=True)
 
     @agent
     def intelligent_scheduling_coordinator(self) -> Agent:
@@ -41,7 +40,6 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def multi_channel_communications_manager(self) -> Agent:
         return Agent(config=self.agents_config['multi_channel_communications_manager'], llm=self.gemini_llm, verbose=True)
 
-    # Tareas sincronizadas con las llaves de tu tasks.yaml
     @task
     def phase_1___user_authentication(self) -> Task:
         return Task(config=self.tasks_config['phase_1___user_authentication'], agent=self.security_authentication_specialist())

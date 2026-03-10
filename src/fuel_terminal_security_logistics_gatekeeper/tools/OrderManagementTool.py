@@ -1,48 +1,44 @@
+import pandas as pd
 import io
-from datetime import datetime, timedelta
 from crewai_tools import BaseTool
-from typing import List
+from datetime import datetime
 
-try:
-    from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
-except ImportError:
-    def get_ms_account(): return None
+class OrderManagementTool(BaseTool):
+    name: str = "order_management_tool"
+    description: str = "Registra la orden en Master_Control_Orders.xlsx con encabezados oficiales."
 
-class OutlookCalendarTool(BaseTool):
-    name: str = "outlook_calendar_tool"
-    description: str = "Busca disponibilidad en las 7 islas de la terminal y reserva slots de 30 minutos."
-
-    def _run(self, requested_datetime: str, plate_id: str) -> str:
+    def _run(self, order_id: str, dispatcher_email: str, plate_id: str, driver_name: str, fuel_volume: str, assigned_island: str, appointment_date: str, start_time: str, end_time: str) -> str:
         try:
             account = get_ms_account()
-            schedule = account.schedule()
-            
-            # Convertir string de entrada a objeto datetime
-            start_dt = datetime.fromisoformat(requested_datetime)
-            end_dt = start_dt + timedelta(minutes=30)
-            
-            islas = [f"Terminal_Isla_{i}" for i in range(1, 8)]
-            alternativas = []
-            
-            # 1. Intentar reservar en el slot solicitado
-            for isla in islas:
-                calendar = schedule.get_calendar(calendar_name=isla)
-                # Verificar disponibilidad (esto es una simplificación de la lógica de búsqueda de Graph)
-                events = calendar.get_events(query=f"start/dateTime ge '{start_dt.isoformat()}' and end/dateTime le '{end_dt.isoformat()}'")
-                
-                event_list = list(events)
-                if len(event_list) == 0:
-                    # Slot libre, procedemos a reservar
-                    new_event = calendar.new_event()
-                    new_event.subject = f"Carga de Combustible: {plate_id}"
-                    new_event.start = start_dt
-                    new_event.end = end_dt
-                    new_event.save()
-                    return f"SLOT_CONFIRMADO: Isla: {isla}, Horario: {start_dt.strftime('%H:%M')} - {end_dt.strftime('%H:%M')}."
+            drive = account.storage().get_default_drive()
+            folder = drive.get_root().get_item('Fuel_Terminal_System')
+            file_item = folder.get_item('Master_Control_Orders.xlsx')
 
-            # 2. Si no hay espacio, buscar las siguientes 3 opciones (Lógica de Alternativas)
-            # Aquí buscaríamos en los próximos rangos de 30 min en todas las islas
-            return "SLOT_OCUPADO: No hay disponibilidad en el horario solicitado. Alternativas propuestas: [10:00 AM Isla 2, 10:30 AM Isla 1, 11:00 AM Isla 5]."
-
+            content = file_item.download()
+            df = pd.read_excel(io.BytesIO(content), engine='openpyxl')
+            
+            # Encabezados EXACTOS según tu requerimiento
+            new_row = {
+                'OrderID': order_id,
+                'Date of Request': datetime.now().strftime('%Y-%m-%d'),
+                'Dispatcher Email': dispatcher_email,
+                'Truck Plate': plate_id.upper(),
+                'Driver Name': driver_name,
+                'Fuel Volume (Gallons)': fuel_volume,
+                'Assigned Island': assigned_island,
+                'Appointment Date': appointment_date,
+                'Start Time': start_time,
+                'End_Time': end_time
+            }
+            
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False)
+            
+            output.seek(0)
+            file_item.update_contents(output.read())
+            
+            return f"ÉXITO: Orden {order_id} registrada con todos los campos técnicos."
         except Exception as e:
-            return f"ERROR_CALENDARIO: Fallo al acceder a Outlook. Detalle: {str(e)}"
+            return f"ERROR_SISTEMA: Fallo al registrar orden. Detalle: {str(e)}"
