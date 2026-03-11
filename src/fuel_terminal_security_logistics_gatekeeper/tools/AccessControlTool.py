@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import io
 from crewai_tools import BaseTool
