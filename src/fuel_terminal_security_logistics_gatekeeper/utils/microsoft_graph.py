@@ -3,9 +3,10 @@ import os
 
 def get_ms_account():
     # Recuperar variables de entorno de GitHub Secrets o .env
-    client_id = os.getenv('AZURE_CLIENT_ID')
-    client_secret = os.getenv('AZURE_CLIENT_SECRET')
-    tenant_id = os.getenv('AZURE_TENANT_ID')
+    # Intenta obtener el ID desde cualquiera de los dos nombres posibles
+    client_id = os.getenv('AZURE_CLIENT_ID') or os.getenv('OUTLOOK_CLIENT_ID')
+    client_secret = os.getenv('AZURE_CLIENT_SECRET') or os.getenv('OUTLOOK_CLIENT_SECRET')
+    tenant_id = os.getenv('AZURE_TENANT_ID') or os.getenv('OUTLOOK_TENANT_ID')
 
     if not all([client_id, client_secret, tenant_id]):
         print("ERROR: Faltan variables de entorno de Azure (ID, Secret o Tenant).")
