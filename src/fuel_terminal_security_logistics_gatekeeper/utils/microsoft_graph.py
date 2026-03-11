@@ -1,7 +1,7 @@
 import os
 from O365 import Account
 # Aquí está el cambio clave:
-from O365.connection import MSALAuthentication 
+from O365.connection import MsalAuthentication 
 # Nota: A veces es con mayúsculas 'MSALAuthentication', revisa tu versión.
 # Si falla, intenta: from O365 import MSALAuthentication
 def get_ms_account():
