@@ -1,5 +1,9 @@
 import os
-from O365 import Account, MsalAuthentication
+from O365 import Account
+# Aquí está el cambio clave:
+from O365.connection import MSALAuthentication 
+# Nota: A veces es con mayúsculas 'MSALAuthentication', revisa tu versión.
+# Si falla, intenta: from O365 import MSALAuthentication
 def get_ms_account():
     client_id = os.getenv('AZURE_CLIENT_ID') or os.getenv('OUTLOOK_CLIENT_ID')
     client_secret = os.getenv('AZURE_CLIENT_SECRET') or os.getenv('OUTLOOK_CLIENT_SECRET')
