@@ -20,6 +20,8 @@ class VehicleRegistryTool(BaseTool):
     description: str = "Valida usuarios en 'Authorized_Users' y vehículos en 'Vehicle_Registry' desde Master_Control.xlsx."
 
     def _run(self, dispatcher_email: Optional[str] = None, plate_id: Optional[str] = None, driver_name: Optional[str] = None) -> str:
+        import os  # <--- COLÓCALO AQUÍ, DENTRO DEL MÉTODO
+        from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
         account = get_ms_account()
         if not account:
             return "ERROR_CONEXIÓN: No se pudo obtener la cuenta de Microsoft. Verifica credenciales de Azure."

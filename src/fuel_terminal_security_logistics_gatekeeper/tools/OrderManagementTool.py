@@ -19,6 +19,8 @@ class OrderManagementTool(BaseTool):
     description: str = "Registra la orden final en Master_Control_Orders.xlsx."
 
     def _run(self, order_id: str, dispatcher_email: str, plate_id: str, driver_name: str, fuel_volume: str, assigned_island: str, appointment_date: str, start_time: str, end_time: str) -> str:
+        import os  # <--- COLÓCALO AQUÍ, DENTRO DEL MÉTODO
+        from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
         account = get_ms_account()
         if not account:
             return "ERROR_CONEXIÓN: No se puede registrar la orden sin acceso a OneDrive."

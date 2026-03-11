@@ -16,6 +16,8 @@ class CommunicationsTool(BaseTool):
     description: str = "Envía notificaciones por correo a despachadores y conductores vía Outlook."
 
     def _run(self, recipient_email: str, subject: str, body: str) -> str:
+        import os  # <--- COLÓCALO AQUÍ, DENTRO DEL MÉTODO
+        from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
         account = get_ms_account()
         if not account:
             return "ERROR_CONEXIÓN: No se pudo enviar el correo por falta de autenticación."
