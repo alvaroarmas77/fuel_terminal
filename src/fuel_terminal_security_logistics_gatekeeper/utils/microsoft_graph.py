@@ -1,6 +1,6 @@
 import os
 from O365 import Account
-from O365.connection import MSALAuthentication
+from O365.connection import MsalAuthentication
 
 def get_ms_account():
     client_id = os.getenv('AZURE_CLIENT_ID') or os.getenv('OUTLOOK_CLIENT_ID')
@@ -14,7 +14,7 @@ def get_ms_account():
     scopes = ['https://graph.microsoft.com/.default']
 
     try:
-        auth = MSALAuthentication(
+        auth = MsalAuthentication(
             client_id=client_id,
             client_secret=client_secret,
             tenant_id=tenant_id,
