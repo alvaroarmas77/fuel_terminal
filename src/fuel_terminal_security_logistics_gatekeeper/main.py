@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import sys
 from datetime import datetime
 from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
