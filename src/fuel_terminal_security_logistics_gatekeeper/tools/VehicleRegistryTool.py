@@ -21,6 +21,20 @@ class VehicleRegistryTool(BaseTool):
 
     def _run(self, dispatcher_email: Optional[str] = None, plate_id: Optional[str] = None, driver_name: Optional[str] = None) -> str:
         import os  # <--- COLÓCALO AQUÍ, DENTRO DEL MÉTODO
+        import sys
+
+        # Opcional: Para debugear si realmente está viendo las variables
+        if not os.getenv('AZURE_CLIENT_ID'):
+            return "ERROR_CRITICO: El sistema no detecta variables de entorno."
+
+        # Tu lógica de conexión aquí...
+        try:
+            # Asegúrate de que microsoft_graph también se importe aquí dentro
+            from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
+            account = get_ms_account()
+            # ... resto de la lógica
+        except Exception as e:
+            return f"Error en la ejecución: {str(e)}"
         from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
         account = get_ms_account()
         if not account:
