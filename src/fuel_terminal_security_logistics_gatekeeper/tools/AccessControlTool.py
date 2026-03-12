@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import io
+import O365
 from crewai_tools import BaseTool
 
 try:

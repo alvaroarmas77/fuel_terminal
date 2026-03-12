@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import io
 import sys
+import O365
 from typing import Optional
 from crewai_tools import BaseTool
 

@@ -1,6 +1,7 @@
 import os
 import sys
 import msal
+import O365
 from O365 import Account
 print(f"DEBUG: Versión de O365: {getattr(O365, '__version__', 'Desconocida')}")
 print(f"DEBUG: Directorio de O365: {dir(O365)}")
