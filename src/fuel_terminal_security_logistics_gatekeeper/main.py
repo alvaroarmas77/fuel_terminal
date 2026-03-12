@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 import os
 import sys
+import O365
+import msal
+print(f"DEBUG: Versión de O365: {getattr(O365, '__version__', 'Desconocida')}")
+print(f"DEBUG: Directorio de O365: {dir(O365)}")
 from datetime import datetime
 from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
 

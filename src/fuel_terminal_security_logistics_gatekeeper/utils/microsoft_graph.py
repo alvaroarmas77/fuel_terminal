@@ -1,7 +1,9 @@
 import os
 import sys
+import msal
 from O365 import Account
-
+print(f"DEBUG: Versión de O365: {getattr(O365, '__version__', 'Desconocida')}")
+print(f"DEBUG: Directorio de O365: {dir(O365)}")
 # --- BLOQUE DE IMPORTACIÓN UNIVERSAL ---
 # Probamos todas las rutas posibles en un solo push para evitar fallos de versión
 AuthClass = None
