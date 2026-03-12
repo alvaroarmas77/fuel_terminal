@@ -1,28 +1,40 @@
 #!/usr/bin/env python
 import os
 import sys
-import O365
-import msal
-print(f"DEBUG: Versión de O365: {getattr(O365, '__version__', 'Desconocida')}")
-print(f"DEBUG: Directorio de O365: {dir(O365)}")
+
+# --- BLOQUE DE SEGURIDAD DE LIBRERÍAS ---
+try:
+    import O365
+    import msal
+    # Limpieza: se eliminó el '=' extra que causaba error de sintaxis
+    print(f"DEBUG: Versión de O365 cargada: {getattr(O365, '__version__', 'Desconocida')}")
+except ImportError:
+    print("\n[!] ERROR CRÍTICO: Librerías no encontradas.")
+    print("Por favor, asegúrate de que 'requirements.txt' contenga 'O365' (con O de Office) y no '0365'.")
+    sys.exit(1)
+
 from datetime import datetime
+# Asegúrate de que esta ruta coincida con el nombre de tu paquete en el archivo pyproject.toml
 from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
 
 def run():
     ahora = datetime.now()
     
-    # Mapeo homogeneizado para que coincida con Tools y Tasks
+    # --- CONFIGURACIÓN DE ENTRADAS (INPUTS) ---
+    # Para órdenes con múltiples camiones, envía los datos como strings separados por comas.
+    # La herramienta 'order_management_tool' ahora está preparada para separar estos valores 
+    # y crear una fila independiente para cada uno manteniendo el mismo order_id.
     inputs = {
         # Identificadores de Personas (Fases 1, 2 y 5)
-        'driver_id': 'D-9876',
-        'driver_name': 'Juan Pérez',
-        'driver_email': 'juan.perez@transporte.com',
+        'driver_id': 'D-9876, D-5432', # Ejemplo multi-unidad
+        'driver_name': 'Juan Pérez, Ricardo Gómez', # Ejemplo multi-unidad
+        'driver_email': 'juan.perez@transporte.com, ricardo.g@transporte.com',
         'dispatcher_email': 'logistics@terminal-sur.com',
         'sender_email': 'logistics@terminal-sur.com',
         
         # Identificadores de Vehículo (Fases 2 y 3)
-        'plate_id': 'ABC-1234', 
-        'truck_plate': 'ABC-1234', # Mantenemos ambos por compatibilidad con los YAML
+        'plate_id': 'ABC-1234, XYZ-9876', # Ejemplo multi-unidad
+        'truck_plate': 'ABC-1234, XYZ-9876', 
         
         # Datos de Tiempo y Ubicación (Fase 3)
         'requested_datetime': ahora.strftime('%Y-%m-%dT%H:00:00'), 
@@ -31,10 +43,10 @@ def run():
         'terminal_location': 'Terminal Sur - Surquillo',
         
         # Datos de Orden (Fase 4)
-        'fuel_volume': '5000', # Solo el número o texto, la Tool añade "Gallons" si lo pusiste en el encabezado
+        'fuel_volume': '5000, 3000', # Ejemplo multi-unidad
         'order_id': f"ORD-{ahora.strftime('%y%m%d%H%M')}",
         
-        # Placeholders para que CrewAI gestione los datos que vienen del Calendario (Fase 3 -> Fase 4)
+        # Placeholders para la gestión dinámica de CrewAI
         'appointment_date': ahora.strftime('%Y-%m-%d'),
         'start_time': '', 
         'end_time': '',
@@ -42,16 +54,17 @@ def run():
     }
 
     try:
-        # Instanciamos el Crew con la configuración limpia
+        print(f"\n--- Iniciando Crew para la Orden Maestra: {inputs['order_id']} ---")
+        
+        # Instanciamos el Crew
         gatekeeper_crew = FuelTerminalSecurityLogisticsGatekeeperCrew().crew()
         
-        # Ejecución del proceso secuencial
+        # Ejecución del proceso secuencial blindado por los candados de seguridad
         result = gatekeeper_crew.kickoff(inputs=inputs)
         
         print(f"\n--- [RESULTADO FINAL DE LA OPERACIÓN] ---\n{result}")
         
     except Exception as e:
-        # Captura de errores de importación o ejecución
         print(f"\n[ERROR CRÍTICO EN EL FLUJO]: {str(e)}")
         sys.exit(1)
 

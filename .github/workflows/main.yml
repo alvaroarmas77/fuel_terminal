@@ -29,7 +29,7 @@ jobs:
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install 0365 msal
+          pip install O365 msal
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install --no-cache-dir -r requirements.txt # Forzar descarga limpia
           pip install -r requirements.txt

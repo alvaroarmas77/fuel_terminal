@@ -6,7 +6,10 @@ from crewai_tools import BaseTool
 try:
     from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
 except ImportError:
-    def get_ms_account(): return None
+    try:
+        from utils.microsoft_graph import get_ms_account
+    except ImportError:
+        def get_ms_account(): return None
 
 class AccessControlTool(BaseTool):
     name: str = "access_control_tool"
@@ -15,7 +18,10 @@ class AccessControlTool(BaseTool):
     def _run(self, driver_id: str, terminal_id: str = "Terminal Sur") -> str:
         try:
             account = get_ms_account()
-            # Navegación directa: Root -> Carpeta -> Archivo
+            if not account:
+                return "ERROR_CONEXIÓN: No se pudo conectar con la cuenta de Microsoft."
+
+            # Navegación directa
             drive = account.storage().get_default_drive()
             root = drive.get_root()
             folder = root.get_item('Fuel_Terminal_System')
@@ -30,10 +36,11 @@ class AccessControlTool(BaseTool):
             match = df[df['Driver_ID'] == did]
             if not match.empty:
                 nombre = match['Name'].values[0]
-                if str(match['Blocked'].values[0]).upper() in ['SI', 'YES', 'TRUE']:
+                blocked_val = str(match['Blocked'].values[0]).upper()
+                if blocked_val in ['SI', 'YES', 'TRUE']:
                     return f"DENEGADO: El conductor {nombre} tiene un BLOQUEO ADMINISTRATIVO."
                 return f"CONFIRMACIÓN: Acceso Autorizado para {nombre} en {terminal_id} (SCTR Válido)."
 
             return f"DENEGADO: ID {did} no figura en la base de seguridad."
         except Exception as e:
-            return f"ERROR_SISTEMA: No se pudo localizar el archivo en la ruta especificada. Detalle: {str(e)}"
+            return f"ERROR_SISTEMA: Fallo en la localización o lectura del archivo. Detalle: {str(e)}"
