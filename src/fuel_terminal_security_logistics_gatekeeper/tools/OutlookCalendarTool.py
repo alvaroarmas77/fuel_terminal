@@ -1,7 +1,14 @@
 import sys
 import os
 from datetime import datetime, timedelta
-from crewai_tools import BaseTool
+try:
+    from crewai_tools import BaseTool
+except ImportError:
+    try:
+        from crewai.tools import BaseTool
+    except ImportError:
+        # Si ambas fallan, intentamos la ruta directa de las utilidades de crewai
+        from crewai.tools.base_tool import BaseTool
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 try:

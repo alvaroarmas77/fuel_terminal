@@ -2,8 +2,15 @@ import os
 import pandas as pd
 import io
 import sys
-from crewai_tools import BaseTool
 from datetime import datetime
+try:
+    from crewai_tools import BaseTool
+except ImportError:
+    try:
+        from crewai.tools import BaseTool
+    except ImportError:
+        # Si ambas fallan, intentamos la ruta directa de las utilidades de crewai
+        from crewai.tools.base_tool import BaseTool
 
 class OrderManagementTool(BaseTool):
     name: str = "order_management_tool"
