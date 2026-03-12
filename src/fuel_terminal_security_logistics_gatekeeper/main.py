@@ -9,6 +9,22 @@ os.environ["OPENAI_API_KEY"] = "fake-key-to-bypass-openai-check-for-gemini-3.1"
 # Deshabilitamos telemetría para evitar warnings adicionales en el log de GitHub
 os.environ["OTEL_SDK_DISABLED"] = "true"
 
+def prepare_microsoft_token():
+    """
+    Reconstruye el archivo o365_token.txt desde un Secret de GitHub.
+    Esto evita que el script pida autenticación manual en el servidor.
+    """
+    token_json = os.getenv("O365_TOKEN_JSON")
+    if token_json:
+        try:
+            with open("o365_token.txt", "w") as f:
+                f.write(token_json)
+            print("DEBUG: Archivo o365_token.txt generado exitosamente desde variable de entorno.")
+        except Exception as e:
+            print(f"DEBUG: Error al escribir o365_token.txt: {e}")
+    else:
+        print("DEBUG: [!] Advertencia: No se detectó O365_TOKEN_JSON. Las herramientas podrían fallar.")
+
 # --- BLOQUE DE SEGURIDAD DE LIBRERÍAS ---
 try:
     import O365
@@ -28,6 +44,9 @@ except ImportError as e:
     sys.exit(1)
 
 def run():
+    # --- PREPARACIÓN DE ENTORNO ---
+    prepare_microsoft_token()
+    
     ahora = datetime.now()
     
     # --- CONFIGURACIÓN DE ENTRADAS (INPUTS) ---
@@ -55,7 +74,6 @@ def run():
         crew_instance = FuelTerminalSecurityLogisticsGatekeeperCrew()
         
         # Obtenemos el objeto Crew mediante el método decorado con @crew
-        # Es vital que en crew.py hayas añadido 'manager_llm=self.gemini_llm'
         gatekeeper_crew = crew_instance.crew()
         
         # Ejecutamos el flujo
@@ -64,7 +82,6 @@ def run():
         print(f"\n--- [RESULTADO FINAL DE LA OPERACIÓN] ---\n{result}")
         
     except Exception as e:
-        # Si el error 404 persiste aquí, es un tema del nombre del modelo en crew.py
         print(f"\n[ERROR CRÍTICO EN EL FLUJO]: {str(e)}")
         sys.exit(1)
 

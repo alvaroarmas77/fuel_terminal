@@ -3,13 +3,14 @@ import pandas as pd
 import io
 import sys
 from typing import Optional
+
+# --- COMPATIBILIDAD DE LIBRERÍAS ---
 try:
     from crewai_tools import BaseTool
 except ImportError:
     try:
         from crewai.tools import BaseTool
     except ImportError:
-        # Si ambas fallan, intentamos la ruta directa de las utilidades de crewai
         from crewai.tools.base_tool import BaseTool
 
 # --- BLINDAJE DE IMPORTACIÓN ---
@@ -33,41 +34,58 @@ class VehicleRegistryTool(BaseTool):
         Consulta el registro oficial de vehículos y conductores.
         """
         try:
+            # 1. Validación de Conexión
             account = get_ms_account()
             if not account:
-                return "ERROR_CONEXIÓN: No se pudo conectar con Microsoft Graph."
+                return "ERROR_CONEXIÓN: No se pudo conectar con Microsoft Graph. Verifique el token."
 
-            # 1. Acceso al archivo Maestro
+            # 2. Acceso al archivo Maestro (Ruta blindada)
             drive = account.storage().get_default_drive()
-            folder = drive.get_root().get_item('Fuel_Terminal_System')
-            file_item = folder.get_item('Master_Control.xlsx') 
+            root = drive.get_root()
+            
+            # Navegación por carpeta
+            try:
+                folder = root.get_item('Fuel_Terminal_System')
+                file_item = folder.get_item('Master_Control.xlsx') 
+            except Exception:
+                # Fallback: Si el archivo está en la raíz directamente
+                file_item = root.get_item('Master_Control.xlsx')
+                
             content = file_item.download()
             
-            # 2. Lectura exclusiva de la pestaña de Activos
-            # Nota: Usamos engine='openpyxl' para archivos .xlsx
-            df_veh = pd.read_excel(io.BytesIO(content), sheet_name="Vehicle_registry", engine='openpyxl')
+            # 3. Lectura de la pestaña de Activos (Motor robusto)
+            try:
+                df_veh = pd.read_excel(io.BytesIO(content), sheet_name="Vehicle_registry")
+            except Exception:
+                df_veh = pd.read_excel(io.BytesIO(content), sheet_name="Vehicle_registry", engine='openpyxl')
             
-            # 3. Limpieza de datos para comparación estricta
+            # --- INICIO DE TU LÓGICA ORIGINAL EXTENSA ---
+            
+            # Limpieza de datos para comparación estricta
             p_limpia = str(plate_id).strip().upper()
             d_limpio = str(driver_name).strip().lower()
             
-            # 4. Verificación de los encabezados específicos: 
-            # 'Truck Plate', 'Driver Name', 'Driver Email', 'ID_Interno'
+            # Verificación de los encabezados específicos
+            # Usamos iloc/loc para mantener compatibilidad con versiones de pandas
             match = df_veh[
                 (df_veh['Truck Plate'].astype(str).str.strip().upper() == p_limpia) & 
                 (df_veh['Driver Name'].astype(str).str.strip().lower() == d_limpio)
             ]
             
             if not match.empty:
-                # Extraemos datos adicionales para el log operativo
-                id_interno = match['ID_Interno'].values[0]
-                d_email = match['Driver Email'].values[0]
+                # Extraemos datos adicionales para el log operativo usando .iloc[0]
+                id_interno = match['ID_Interno'].iloc[0]
+                d_email = match['Driver Email'].iloc[0]
+                
+                # Puedes expandir aquí con tus validaciones originales de fechas si las tenías
                 
                 return (f"PHASE_2_SUCCESS: ACTIVOS VALIDADOS - Vehículo: {p_limpia} - "
                         f"Conductor: {driver_name} - ID Interno: {id_interno}. "
                         f"Proceder a asignación de isla.")
             
-            # 5. Respuesta de bloqueo si no coinciden los activos
+            # --- FIN DE TU LÓGICA ORIGINAL ---
+
+            # Respuesta de bloqueo si no coinciden los activos
             return (f"RECHAZO_FASE_2: Error en validación de activos para la placa {p_limpia}. "
                     f"El vehículo o el conductor no están autorizados en el registro oficial.")
 

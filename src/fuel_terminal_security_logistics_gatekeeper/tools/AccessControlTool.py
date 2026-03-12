@@ -2,13 +2,14 @@ import os
 import pandas as pd
 import io
 import sys
+
+# --- COMPATIBILIDAD DE LIBRERÍAS ---
 try:
     from crewai_tools import BaseTool
 except ImportError:
     try:
         from crewai.tools import BaseTool
     except ImportError:
-        # Si ambas fallan, intentamos la ruta directa de las utilidades de crewai
         from crewai.tools.base_tool import BaseTool
 
 # --- BLINDAJE DE IMPORTACIÓN ---
@@ -34,38 +35,53 @@ class AccessControlTool(BaseTool):
         try:
             account = get_ms_account()
             if not account:
-                return "ERROR_CONEXIÓN: No se pudo conectar con Microsoft Graph."
+                # Este error es el que viste en el log anterior (Falta de Token)
+                return "ERROR_CONEXIÓN: No se pudo conectar con Microsoft Graph. Verifique el archivo o365_token.txt."
 
-            # 1. Navegación al archivo maestro definido en tu lógica
+            # 1. Navegación al archivo maestro
+            # get_default_drive() apunta al OneDrive de la cuenta o al sitio principal de SharePoint
             drive = account.storage().get_default_drive()
-            folder = drive.get_root().get_item('Fuel_Terminal_System')
             
-            # Cambiado a Master_Control.xls según tu especificación
+            # Buscamos la carpeta raíz. Si está en una subcarpeta, se puede encadenar .get_item()
+            root = drive.get_root()
+            folder = root.get_item('Fuel_Terminal_System')
+            
+            # Intentamos obtener el archivo. 
+            # NOTA: Si el archivo se llama Master_Control.xlsx pero pusiste .xls, dará error.
             file_item = folder.get_item('Master_Control.xls')
             
-            # 2. Lectura de la pestaña específica 'Authorized_Users'
+            # 2. Descarga y detección de motor de Excel
             content = file_item.download()
-            df = pd.read_excel(
-                io.BytesIO(content), 
-                sheet_name="Authorized_Users", 
-                engine='openpyxl' # O 'xlrd' si es un .xls antiguo real
-            )
             
-            # 3. Limpieza de datos para comparación
+            # Ajuste de robustez: Si es .xls usa 'xlrd', si es .xlsx usa 'openpyxl'
+            # Usamos un try-except interno para la lectura
+            try:
+                df = pd.read_excel(io.BytesIO(content), sheet_name="Authorized_Users")
+            except Exception:
+                # Fallback manual si el motor automático falla
+                df = pd.read_excel(io.BytesIO(content), sheet_name="Authorized_Users", engine='openpyxl')
+            
+            # 3. Limpieza de datos (Evitamos errores por espacios o mayúsculas)
             email_to_check = str(dispatcher_email).strip().lower()
+            
+            # Verificamos que la columna 'Email' exista
+            if 'Email' not in df.columns:
+                return f"ERROR_DATOS: No se encontró la columna 'Email' en la pestaña 'Authorized_Users'."
+
             df['Email'] = df['Email'].astype(str).str.strip().lower()
             
             # 4. Búsqueda de coincidencia
             match = df[df['Email'] == email_to_check]
             
             if not match.empty:
-                nombre = match['Nombre'].values[0]
-                empresa = match['Empresa'].values[0]
-                # Retorna el formato de ÉXITO que espera el flujo
+                # Usamos .iloc[0] para mayor seguridad en pandas moderno
+                nombre = match['Nombre'].iloc[0]
+                empresa = match['Empresa'].iloc[0]
                 return f"PHASE_1_SUCCESS: ACCESO CONCEDIDO - Usuario: {nombre} - Empresa: {empresa}. Procediendo a validación de activos."
 
-            # 5. Retorna el formato de RECHAZO que aborta el flujo
+            # 5. Retorno de rechazo (Esto detiene el Crew según tus reglas de tasks.yaml)
             return f"RECHAZO_FASE_1: El usuario {dispatcher_email} no tiene permisos de acceso en 'Authorized_Users'."
 
         except Exception as e:
-            return f"ERROR_SISTEMA: Fallo en la validación de seguridad. Detalle: {str(e)}"
+            # Captura errores de "Archivo no encontrado" o "Carpeta no existe"
+            return f"ERROR_SISTEMA: Fallo en la herramienta de control de acceso. Detalle: {str(e)}"
