@@ -3,7 +3,7 @@ import pandas as pd
 import io
 import sys
 from typing import Optional
-from crewai.tools import BaseTool
+from crewai_tools import BaseTool
 
 # --- BLINDAJE DE IMPORTACIÓN ---
 try:
