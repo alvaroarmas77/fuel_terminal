@@ -3,6 +3,12 @@ import os
 import sys
 from datetime import datetime
 
+# --- BYPASS PARA FORZAR GEMINI 3.1 Y EVITAR ERROR DE OPENAI ---
+# CrewAI 0.28.0 busca esta variable antes de iniciar, incluso si usas Gemini.
+os.environ["OPENAI_API_KEY"] = "fake-key-to-bypass-openai-check-for-gemini-3.1"
+# Deshabilitamos telemetría para evitar warnings adicionales en el log de GitHub
+os.environ["OTEL_SDK_DISABLED"] = "true"
+
 # --- BLOQUE DE SEGURIDAD DE LIBRERÍAS ---
 try:
     import O365
@@ -15,6 +21,7 @@ except ImportError:
 
 # Importación del Crew
 try:
+    # Asegúrate de que la ruta del paquete sea correcta según tu estructura de carpetas
     from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
 except ImportError as e:
     print(f"\n[!] ERROR DE IMPORTACIÓN: No se encuentra el paquete del Crew. {e}")
@@ -24,29 +31,17 @@ def run():
     ahora = datetime.now()
     
     # --- CONFIGURACIÓN DE ENTRADAS (INPUTS) ---
-    # Nota: Para probar la multi-unidad, enviamos strings separados por comas.
-    # El Security Specialist validará el dispatcher_email (Fase 1).
-    # El Registry Specialist validará las placas y conductores (Fase 2).
     inputs = {
-        # Identificadores de Personas (Fases 1, 2 y 5)
-        'dispatcher_email': 'logistics@terminal-sur.com', # Debe estar en 'Authorized_Users'
-        'driver_name': 'Juan Pérez, Ricardo Gómez',      # Dos conductores
+        'dispatcher_email': 'logistics@terminal-sur.com',
+        'driver_name': 'Juan Pérez, Ricardo Gómez',
         'driver_email': 'juan.perez@transporte.com, ricardo.g@transporte.com',
-        
-        # Identificadores de Vehículo (Fases 2 y 3)
-        'plate_id': 'ABC-1234, XYZ-9876',                 # Dos placas
+        'plate_id': 'ABC-1234, XYZ-9876',
         'truck_plate': 'ABC-1234, XYZ-9876', 
-        
-        # Datos de Tiempo y Ubicación (Fase 3)
         'requested_datetime': ahora.strftime('%Y-%m-%dT%H:00:00'), 
         'current_date': ahora.strftime('%Y-%m-%d'),
         'location': 'Terminal Sur - Surquillo',
-        
-        # Datos de Orden (Fase 4)
-        'fuel_volume': '5000, 3000',                     # Volúmenes para cada camión
+        'fuel_volume': '5000, 3000',
         'order_id': f"ORD-{ahora.strftime('%y%m%d%H%M')}",
-        
-        # Placeholders que serán llenados por los agentes durante el flujo
         'assigned_island': '',
         'appointment_date': ahora.strftime('%Y-%m-%d'),
         'start_time': '', 
@@ -56,13 +51,20 @@ def run():
     try:
         print(f"\n--- Iniciando Crew para la Orden Maestra: {inputs['order_id']} ---")
         
-        # Instanciamos y ejecutamos
-        gatekeeper_crew = FuelTerminalSecurityLogisticsGatekeeperCrew().crew()
+        # Instanciamos la clase del Crew
+        crew_instance = FuelTerminalSecurityLogisticsGatekeeperCrew()
+        
+        # Obtenemos el objeto Crew mediante el método decorado con @crew
+        # Es vital que en crew.py hayas añadido 'manager_llm=self.gemini_llm'
+        gatekeeper_crew = crew_instance.crew()
+        
+        # Ejecutamos el flujo
         result = gatekeeper_crew.kickoff(inputs=inputs)
         
         print(f"\n--- [RESULTADO FINAL DE LA OPERACIÓN] ---\n{result}")
         
     except Exception as e:
+        # Si el error 404 persiste aquí, es un tema del nombre del modelo en crew.py
         print(f"\n[ERROR CRÍTICO EN EL FLUJO]: {str(e)}")
         sys.exit(1)
 
