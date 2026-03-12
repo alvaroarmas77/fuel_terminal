@@ -34,7 +34,7 @@ phase_3___access_control:
     Si alguna de las validaciones previas falló o indica un 'RECHAZO', NO busques espacios en el calendario y finaliza aquí.
 
     INSTRUCCIONES DE PROGRAMACIÓN (Solo si los pasos anteriores son exitosos):
-    1. Accede a los 7 calendarios de Outlook (Islands 1 a 7) de la cuenta de logística.
+    1. Accede a los 7 calendarios de Outlook (IslanTerminal_Isla 1 a 7) de la cuenta de logística.
     2. Busca disponibilidad para el slot solicitado en {requested_datetime} con una duración de 30 minutos.
     3. REGLA DE NO TRASLAPE: El slot debe estar completamente libre; no se permiten citas encimadas.
     4. ACCIÓN DE RESERVA: Si encuentras un espacio libre, reserva el slot usando la placa {plate_id} como asunto de la cita.
@@ -45,9 +45,6 @@ phase_3___access_control:
     - ÉXITO: "SLOT CONFIRMADO - Isla: [Número de Isla] - Horario: [Hora Inicio] a [Hora Fin]. Los activos y el despachador han sido validados previamente."
     - ALTERNATIVA: "SLOT NO DISPONIBLE - El horario solicitado está ocupado. Sugerencias: 1. [Opción 1], 2. [Opción 2], 3. [Opción 3]."
     - BLOQUEO: "OPERACIÓN CANCELADA - No se procedió con la búsqueda de slots debido a fallos en la validación de seguridad previa."
-  context: 
-    - phase_1___user_authentication
-    - phase_2___registry_validation
 
 phase_4___order_logging:
   description: >
@@ -66,8 +63,6 @@ phase_4___order_logging:
     Un reporte de consolidación de registros:
     - ÉXITO: "ORDEN MULTI-UNIDAD REGISTRADA - ID Maestro: {order_id}. Se han insertado [Número de filas] filas correspondientes a los vehículos validados."
     - ERROR: "FALLO DE REGISTRO: No se pudieron escribir los datos en el Excel. Verificar conexión con OneDrive."
-  context:
-    - phase_3___scheduling_and_assignment
 
 phase_5___multi_channel_communications:
   description: >
@@ -91,8 +86,3 @@ phase_5___multi_channel_communications:
     Reporte de finalización de comunicaciones:
     - ÉXITO: "COMUNICACIONES ENVIADAS - Se notificó al despachador y a los conductores de la orden {order_id}."
     - NOTIFICACIÓN_RECHAZO: "ALERTA ENVIADA - Se notificó al despachador que la solicitud fue denegada por fallos en la validación."
-  context:
-    - phase_1___user_authentication
-    - phase_2___registry_validation
-    - phase_3___scheduling_and_assignment
-    - phase_4___order_logging

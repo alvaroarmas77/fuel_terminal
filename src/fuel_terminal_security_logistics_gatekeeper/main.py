@@ -1,65 +1,63 @@
 #!/usr/bin/env python
 import os
 import sys
+from datetime import datetime
 
 # --- BLOQUE DE SEGURIDAD DE LIBRERÍAS ---
 try:
     import O365
     import msal
-    # Limpieza: se eliminó el '=' extra que causaba error de sintaxis
     print(f"DEBUG: Versión de O365 cargada: {getattr(O365, '__version__', 'Desconocida')}")
 except ImportError:
     print("\n[!] ERROR CRÍTICO: Librerías no encontradas.")
-    print("Por favor, asegúrate de que 'requirements.txt' contenga 'O365' (con O de Office) y no '0365'.")
+    print("Por favor, asegúrate de que 'requirements.txt' contenga 'O365' y 'msal'.")
     sys.exit(1)
 
-from datetime import datetime
-# Asegúrate de que esta ruta coincida con el nombre de tu paquete en el archivo pyproject.toml
-from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
+# Importación del Crew
+try:
+    from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
+except ImportError as e:
+    print(f"\n[!] ERROR DE IMPORTACIÓN: No se encuentra el paquete del Crew. {e}")
+    sys.exit(1)
 
 def run():
     ahora = datetime.now()
     
     # --- CONFIGURACIÓN DE ENTRADAS (INPUTS) ---
-    # Para órdenes con múltiples camiones, envía los datos como strings separados por comas.
-    # La herramienta 'order_management_tool' ahora está preparada para separar estos valores 
-    # y crear una fila independiente para cada uno manteniendo el mismo order_id.
+    # Nota: Para probar la multi-unidad, enviamos strings separados por comas.
+    # El Security Specialist validará el dispatcher_email (Fase 1).
+    # El Registry Specialist validará las placas y conductores (Fase 2).
     inputs = {
         # Identificadores de Personas (Fases 1, 2 y 5)
-        'driver_id': 'D-9876, D-5432', # Ejemplo multi-unidad
-        'driver_name': 'Juan Pérez, Ricardo Gómez', # Ejemplo multi-unidad
+        'dispatcher_email': 'logistics@terminal-sur.com', # Debe estar en 'Authorized_Users'
+        'driver_name': 'Juan Pérez, Ricardo Gómez',      # Dos conductores
         'driver_email': 'juan.perez@transporte.com, ricardo.g@transporte.com',
-        'dispatcher_email': 'logistics@terminal-sur.com',
-        'sender_email': 'logistics@terminal-sur.com',
         
         # Identificadores de Vehículo (Fases 2 y 3)
-        'plate_id': 'ABC-1234, XYZ-9876', # Ejemplo multi-unidad
+        'plate_id': 'ABC-1234, XYZ-9876',                 # Dos placas
         'truck_plate': 'ABC-1234, XYZ-9876', 
         
         # Datos de Tiempo y Ubicación (Fase 3)
         'requested_datetime': ahora.strftime('%Y-%m-%dT%H:00:00'), 
         'current_date': ahora.strftime('%Y-%m-%d'),
         'location': 'Terminal Sur - Surquillo',
-        'terminal_location': 'Terminal Sur - Surquillo',
         
         # Datos de Orden (Fase 4)
-        'fuel_volume': '5000, 3000', # Ejemplo multi-unidad
+        'fuel_volume': '5000, 3000',                     # Volúmenes para cada camión
         'order_id': f"ORD-{ahora.strftime('%y%m%d%H%M')}",
         
-        # Placeholders para la gestión dinámica de CrewAI
+        # Placeholders que serán llenados por los agentes durante el flujo
+        'assigned_island': '',
         'appointment_date': ahora.strftime('%Y-%m-%d'),
         'start_time': '', 
-        'end_time': '',
-        'assigned_island': ''
+        'end_time': ''
     }
 
     try:
         print(f"\n--- Iniciando Crew para la Orden Maestra: {inputs['order_id']} ---")
         
-        # Instanciamos el Crew
+        # Instanciamos y ejecutamos
         gatekeeper_crew = FuelTerminalSecurityLogisticsGatekeeperCrew().crew()
-        
-        # Ejecución del proceso secuencial blindado por los candados de seguridad
         result = gatekeeper_crew.kickoff(inputs=inputs)
         
         print(f"\n--- [RESULTADO FINAL DE LA OPERACIÓN] ---\n{result}")
