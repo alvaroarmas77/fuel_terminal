@@ -71,14 +71,6 @@ phase_4___order_logging:
 
 phase_5___multi_channel_communications:
   description: >
-    Para cerrar el ciclo de seguridad, la Fase 5 debe ser la que verifique que todo lo anterior se cumplió. Si alguna de las fases de validación o registro falló, esta tarea no debe enviar confirmaciones de éxito, sino informar el estado real.
-
-Aquí tienes la versión optimizada para tu tasks.yaml:
-Versión Optimizada para tasks.yaml (Fase 5)
-YAML
-
-phase_5___multi_channel_communications:
-  description: >
     REGLA DE CIERRE FINAL:
     1. Revisa el resultado de 'phase_4___order_logging'. 
     2. Solo si el registro fue exitoso ('ORDEN REGISTRADA'), procede con el envío de notificaciones de éxito.
