@@ -2,12 +2,12 @@ import os
 from O365 import Account, FileSystemTokenBackend
 
 def get_ms_account():
-    # 1. DEFINICIÓN DE LA RUTA (Esto es lo que faltaba)
-    # Asumiendo que este archivo está en: src/fuel_terminal_security_logistics_gatekeeper/utils/
-    # Subimos dos niveles para llegar a la raíz donde está 'o365_token.txt'
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    # 1. SOLUCIÓN AL NameError: Definimos project_root dinámicamente
+    # Esto busca la carpeta raíz donde GitHub Actions pone el archivo o365_token.txt
+    project_root = os.getcwd() 
 
     client_id = '5666a19b-c616-43a9-8126-1eb9e31dbd67'
+    # Con el token físico, la contraseña no es necesaria, pero la estructura sí
     credentials = (client_id, 'TOKEN_AUTH_ACTIVE') 
 
     scopes = [
@@ -18,7 +18,6 @@ def get_ms_account():
         'https://graph.microsoft.com/User.Read.All'
     ]
 
-    # 2. USO DE LA VARIABLE YA DEFINIDA
     token_backend = FileSystemTokenBackend(
         token_path=project_root, 
         token_filename='o365_token.txt'
@@ -31,11 +30,17 @@ def get_ms_account():
             main_resource='https://graph.microsoft.com/v1.0'
         )
         
-        # Intentar autenticar de forma silenciosa (usando el token)
+        # 2. SOLUCIÓN AL BLOQUEO DE URL: refresh_token() primero
+        # Esto intenta usar la "llave de refresco" del archivo sin pedir interacción humana
+        if account.connection.refresh_token():
+            return account
+        
+        # 3. ÚLTIMO RECURSO: authenticate silencioso
+        # Si esto falla, devuelve None en lugar de colgar el sistema pidiendo una URL
         if account.authenticate(scopes=scopes):
             return account
         else:
-            print("ERROR_AUTH: El token no es válido o ha expirado.")
+            print("ERROR_AUTH: El token no es válido o los scopes no coinciden.")
             return None
             
     except Exception as e:
