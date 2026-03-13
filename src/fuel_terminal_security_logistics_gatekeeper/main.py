@@ -3,27 +3,22 @@ import os
 import sys
 from datetime import datetime
 
-# --- BYPASS PARA FORZAR GEMINI 3.1 Y EVITAR ERROR DE OPENAI ---
-# CrewAI 0.28.0 busca esta variable antes de iniciar, incluso si usas Gemini.
-os.environ["OPENAI_API_KEY"] = "fake-key-to-bypass-openai-check-for-gemini-3.1"
-# Deshabilitamos telemetría para evitar warnings adicionales en el log de GitHub
+# --- BYPASS PARA FORZAR GEMINI Y EVITAR ERROR DE OPENAI ---
+os.environ["OPENAI_API_KEY"] = "fake-key-to-bypass-openai-check"
 os.environ["OTEL_SDK_DISABLED"] = "true"
 
-def prepare_microsoft_token():
+def verify_microsoft_token():
     """
-    Reconstruye el archivo o365_token.txt desde un Secret de GitHub.
-    Esto evita que el script pida autenticación manual en el servidor.
+    Verifica que el archivo o365_token.txt exista.
+    En GitHub Actions, este archivo es creado por el paso anterior en el workflow.yml.
     """
-    token_json = os.getenv("O365_TOKEN_JSON")
-    if token_json:
-        try:
-            with open("o365_token.txt", "w") as f:
-                f.write(token_json)
-            print("DEBUG: Archivo o365_token.txt generado exitosamente desde variable de entorno.")
-        except Exception as e:
-            print(f"DEBUG: Error al escribir o365_token.txt: {e}")
+    if os.path.exists("o365_token.txt"):
+        print("DEBUG: [OK] Archivo o365_token.txt detectado. Iniciando con autenticación por token.")
     else:
-        print("DEBUG: [!] Advertencia: No se detectó O365_TOKEN_JSON. Las herramientas podrían fallar.")
+        print("DEBUG: [!] ERROR CRÍTICO: No se encontró o365_token.txt.")
+        print("Asegúrate de que el Workflow de GitHub esté creando el archivo correctamente.")
+        # No salimos aquí para permitir que la librería intente cargar, 
+        # pero es una advertencia de fallo inminente si no existe.
 
 # --- BLOQUE DE SEGURIDAD DE LIBRERÍAS ---
 try:
@@ -31,13 +26,11 @@ try:
     import msal
     print(f"DEBUG: Versión de O365 cargada: {getattr(O365, '__version__', 'Desconocida')}")
 except ImportError:
-    print("\n[!] ERROR CRÍTICO: Librerías no encontradas.")
-    print("Por favor, asegúrate de que 'requirements.txt' contenga 'O365' y 'msal'.")
+    print("\n[!] ERROR CRÍTICO: Librerías O365 o msal no encontradas.")
     sys.exit(1)
 
 # Importación del Crew
 try:
-    # Asegúrate de que la ruta del paquete sea correcta según tu estructura de carpetas
     from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
 except ImportError as e:
     print(f"\n[!] ERROR DE IMPORTACIÓN: No se encuentra el paquete del Crew. {e}")
@@ -45,7 +38,7 @@ except ImportError as e:
 
 def run():
     # --- PREPARACIÓN DE ENTORNO ---
-    prepare_microsoft_token()
+    verify_microsoft_token()
     
     ahora = datetime.now()
     
@@ -70,13 +63,9 @@ def run():
     try:
         print(f"\n--- Iniciando Crew para la Orden Maestra: {inputs['order_id']} ---")
         
-        # Instanciamos la clase del Crew
+        # Ejecución
         crew_instance = FuelTerminalSecurityLogisticsGatekeeperCrew()
-        
-        # Obtenemos el objeto Crew mediante el método decorado con @crew
         gatekeeper_crew = crew_instance.crew()
-        
-        # Ejecutamos el flujo
         result = gatekeeper_crew.kickoff(inputs=inputs)
         
         print(f"\n--- [RESULTADO FINAL DE LA OPERACIÓN] ---\n{result}")

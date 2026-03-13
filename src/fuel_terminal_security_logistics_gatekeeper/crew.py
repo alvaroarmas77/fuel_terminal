@@ -2,7 +2,6 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
-import json
 
 # Importación de Herramientas
 from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
@@ -10,14 +9,6 @@ from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool impor
 from fuel_terminal_security_logistics_gatekeeper.tools.OutlookCalendarTool import OutlookCalendarTool
 from fuel_terminal_security_logistics_gatekeeper.tools.OrderManagementTool import OrderManagementTool
 from fuel_terminal_security_logistics_gatekeeper.tools.CommunicationsTool import CommunicationsTool
-
-# GitHub Actions pasará el secreto como una variable de entorno
-token_json = os.getenv('O365_TOKEN_JSON')
-
-if token_json:
-    # El agente usará este JSON para autenticarse y renovarse solo
-    with open('o365_token.txt', 'w') as f:
-        f.write(token_json)
 
 @CrewBase
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
@@ -39,7 +30,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['security_authentication_specialist'], 
             tools=[AccessControlTool()], 
             llm=self.gemini_llm, 
-            verbose=True, # <--- COMA AGREGADA
+            verbose=True,
             allow_delegation=False
         )
 
@@ -49,7 +40,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['registry_validation_specialist'], 
             tools=[VehicleRegistryTool()], 
             llm=self.gemini_llm, 
-            verbose=True, # <--- COMA AGREGADA
+            verbose=True,
             allow_delegation=False
         )
 
@@ -59,7 +50,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['intelligent_scheduling_coordinator'], 
             tools=[OutlookCalendarTool()], 
             llm=self.gemini_llm, 
-            verbose=True, # <--- COMA AGREGADA
+            verbose=True,
             allow_delegation=False
         )
 
@@ -69,7 +60,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['order_logging_specialist'], 
             tools=[OrderManagementTool()], 
             llm=self.gemini_llm, 
-            verbose=True, # <--- COMA AGREGADA
+            verbose=True,
             allow_delegation=False
         )
 
@@ -79,7 +70,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['multi_channel_communications_manager'],
             tools=[CommunicationsTool()],
             llm=self.gemini_llm,
-            verbose=True, # <--- COMA AGREGADA
+            verbose=True,
             allow_delegation=False
         )
 
@@ -130,5 +121,5 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             tasks=self.tasks,
             process=Process.sequential,
             verbose=True,
-            manager_llm=self.gemini_llm # Mata el error de OpenAI
+            manager_llm=self.gemini_llm
         )
