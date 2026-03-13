@@ -3,26 +3,12 @@ import pandas as pd
 import io
 import sys
 from O365 import Account, FileSystemTokenBackend
-# Si también usas la conexión de tu utilidad:
-from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
-from typing import Optional
+from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account #
 
 try:
     from crewai_tools import BaseTool
 except ImportError:
-    try:
-        from crewai.tools import BaseTool
-    except ImportError:
-        from crewai.tools.base_tool import BaseTool
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-try:
-    from utils.microsoft_graph import get_ms_account
-except ImportError:
-    try:
-        from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
-    except ImportError:
-        def get_ms_account(): return None
+    from crewai.tools import BaseTool
 
 class VehicleRegistryTool(BaseTool):
     name: str = "vehicle_registry_tool"

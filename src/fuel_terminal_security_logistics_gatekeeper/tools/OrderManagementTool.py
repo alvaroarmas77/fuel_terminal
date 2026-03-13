@@ -4,15 +4,12 @@ import io
 import sys
 from datetime import datetime
 from O365 import Account, FileSystemTokenBackend
-# Si también usas la conexión de tu utilidad:
 from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
+
 try:
     from crewai_tools import BaseTool
 except ImportError:
-    try:
-        from crewai.tools import BaseTool
-    except ImportError:
-        from crewai.tools.base_tool import BaseTool
+    from crewai.tools import BaseTool
 
 class OrderManagementTool(BaseTool):
     name: str = "order_management_tool"
@@ -25,31 +22,30 @@ class OrderManagementTool(BaseTool):
              fuel_volume: str, assigned_island: str, appointment_date: str, 
              start_time: str, end_time: str) -> str:
         
-        # CAMBIO: Importación de la utilidad corregida
-        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        try:
-            from utils.microsoft_graph import get_ms_account
-        except ImportError:
-            from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
-        
         account = get_ms_account()
         if not account:
-            return "ERROR_CONEXIÓN: No se pudo obtener acceso a la cuenta de Microsoft."
+            return "ERROR_CONEXIÓN: No se pudo acceder a Excel para registrar la orden."
 
         try:
-            # Lógica de procesamiento de listas intacta
             drive = account.storage().get_default_drive()
-            folder = drive.get_root().get_item('Fuel_Terminal_System')
+            root = drive.get_root()
+            folder = root.get_item('Fuel_Terminal_System')
             file_item = folder.get_item('Master_Control_Orders.xlsx')
             
+            # Descarga el archivo actual
             content = file_item.download()
-            df = pd.read_excel(io.BytesIO(content), engine='openpyxl')
-            
-            plates = [p.strip().upper() for p in str(plate_id).split(',')]
+            try:
+                df = pd.read_excel(io.BytesIO(content))
+            except Exception:
+                df = pd.read_excel(io.BytesIO(content), engine='openpyxl')
+
+            # Manejo de múltiples unidades (split por comas)
+            plates = [p.strip() for p in str(plate_id).split(',')]
             drivers = [d.strip() for d in str(driver_name).split(',')]
             volumes = [v.strip() for v in str(fuel_volume).split(',')]
             
             num_units = len(plates)
+            # Aseguramos que las listas tengan la misma longitud
             if len(drivers) < num_units: drivers = drivers * num_units
             if len(volumes) < num_units: volumes = volumes * num_units
 
@@ -69,6 +65,7 @@ class OrderManagementTool(BaseTool):
                 }
                 new_entries.append(row)
             
+            # Concatenar y subir
             new_df = pd.concat([df, pd.DataFrame(new_entries)], ignore_index=True)
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -76,6 +73,7 @@ class OrderManagementTool(BaseTool):
             
             output.seek(0)
             file_item.update_contents(output.read())
+            
             return f"REGISTRO_EXITOSO: Se han registrado {num_units} unidades bajo la orden maestra {order_id}."
             
         except Exception as e:
