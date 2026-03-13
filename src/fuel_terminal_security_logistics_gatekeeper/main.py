@@ -37,6 +37,12 @@ except ImportError as e:
     sys.exit(1)
 
 def run():
+    # --- BLOQUE NUEVO: RECONSTRUCCIÓN DEL TOKEN DESDE GITHUB SECRETS ---
+    token_json = os.getenv('O365_TOKEN_JSON')
+    if token_json:
+        with open('o365_token.txt', 'w') as f:
+            f.write(token_json)
+    # -----------------------------------------------------------------
     # --- PREPARACIÓN DE ENTORNO ---
     verify_microsoft_token()
     
