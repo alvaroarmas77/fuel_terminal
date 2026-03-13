@@ -2,6 +2,9 @@ import os
 import pandas as pd
 import io
 import sys
+from O365 import Account, FileSystemTokenBackend
+# Si también usas la conexión de tu utilidad:
+from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
 from typing import Optional
 
 try:
