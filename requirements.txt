@@ -11,3 +11,11 @@ msal>=1.20.0
 pytz==2024.1
 # Necesario para que pandas procese Excel en el runner sin errores
 pyarrow
+
+# --- AGREGADOS PARA ESTABILIDAD EN GITHUB ACTIONS ---
+# Motor adicional para archivos .xls antiguos (Master_Control.xls)
+xlrd>=2.0.1
+# Dependencia necesaria para que O365 maneje la autenticación de forma segura
+requests-oauthlib>=1.3.1
+# Asegura que la comunicación con la API de Google sea fluida
+google-generativeai>=0.5.2

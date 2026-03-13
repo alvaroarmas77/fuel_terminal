@@ -14,8 +14,8 @@ def get_ms_account():
     ]
 
     token_backend = FileSystemTokenBackend(
-        token_path='.', 
-        token_filename='o365_token.txt'
+    token_path=project_root, 
+    token_filename='o365_token.txt'
     )
 
     try:
