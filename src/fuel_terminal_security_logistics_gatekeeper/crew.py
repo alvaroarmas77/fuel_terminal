@@ -2,6 +2,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
+import json
 
 # Importación de Herramientas
 from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
@@ -9,6 +10,14 @@ from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool impor
 from fuel_terminal_security_logistics_gatekeeper.tools.OutlookCalendarTool import OutlookCalendarTool
 from fuel_terminal_security_logistics_gatekeeper.tools.OrderManagementTool import OrderManagementTool
 from fuel_terminal_security_logistics_gatekeeper.tools.CommunicationsTool import CommunicationsTool
+
+# GitHub Actions pasará el secreto como una variable de entorno
+token_json = os.getenv('O365_TOKEN_JSON')
+
+if token_json:
+    # El agente usará este JSON para autenticarse y renovarse solo
+    with open('o365_token.txt', 'w') as f:
+        f.write(token_json)
 
 @CrewBase
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
