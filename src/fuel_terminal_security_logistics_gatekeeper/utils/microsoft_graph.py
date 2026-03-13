@@ -2,21 +2,21 @@ import os
 from O365 import Account, FileSystemTokenBackend
 
 def get_ms_account():
-    # 1. SOLUCIÓN AL NameError: Definimos project_root dinámicamente
-    # Esto busca la carpeta raíz donde GitHub Actions pone el archivo o365_token.txt
+    # 1. Definimos la ruta absoluta (Evita el error NameError: project_root)
     project_root = os.getcwd() 
 
-    client_id = '5666a19b-c616-43a9-8126-1eb9e31dbd67'
-    # Con el token físico, la contraseña no es necesaria, pero la estructura sí
-    credentials = (client_id, 'TOKEN_AUTH_ACTIVE') 
+    # 2. Sincronización con tus nombres en GitHub
+    # El segundo parámetro es el respaldo (ID referencial)
+    client_id = os.getenv('AZURE_CLIENT_ID', '5666a19b-c616-43a9-8126-1eb9e31dbd67')
+    
+    # El Secret NUNCA debe tener un respaldo hardcoded por seguridad
+    client_secret = os.getenv('AZURE_CLIENT_SECRET') 
 
-    scopes = [
-        'https://graph.microsoft.com/Mail.Send',
-        'https://graph.microsoft.com/Files.ReadWrite.All',
-        'https://graph.microsoft.com/Calendars.ReadWrite',
-        'https://graph.microsoft.com/Sites.ReadWrite.All',
-        'https://graph.microsoft.com/User.Read.All'
-    ]
+    if not client_secret:
+        print("ERROR_CRITICO: La variable AZURE_CLIENT_SECRET está vacía en GitHub.")
+        return None
+
+    credentials = (client_id, client_secret)
 
     token_backend = FileSystemTokenBackend(
         token_path=project_root, 
@@ -30,18 +30,25 @@ def get_ms_account():
             main_resource='https://graph.microsoft.com/v1.0'
         )
         
-        # 2. SOLUCIÓN AL BLOQUEO DE URL: refresh_token() primero
-        # Esto intenta usar la "llave de refresco" del archivo sin pedir interacción humana
+        # 3. Intentamos refrescar el token de forma silenciosa
+        # Esto es lo que evita que el bot pida una URL en la consola de GitHub
         if account.connection.refresh_token():
             return account
         
-        # 3. ÚLTIMO RECURSO: authenticate silencioso
-        # Si esto falla, devuelve None en lugar de colgar el sistema pidiendo una URL
+        # 4. Intento final de autenticación con los scopes correctos
+        scopes = [
+            'https://graph.microsoft.com/Mail.Send',
+            'https://graph.microsoft.com/Files.ReadWrite.All',
+            'https://graph.microsoft.com/Calendars.ReadWrite',
+            'https://graph.microsoft.com/Sites.ReadWrite.All',
+            'https://graph.microsoft.com/User.Read.All'
+        ]
+
         if account.authenticate(scopes=scopes):
             return account
-        else:
-            print("ERROR_AUTH: El token no es válido o los scopes no coinciden.")
-            return None
+        
+        print("ERROR_AUTH: No se pudo validar el token ni refrescarlo.")
+        return None
             
     except Exception as e:
         print(f"ERROR_SISTEMA_GRAPH: {str(e)}")
