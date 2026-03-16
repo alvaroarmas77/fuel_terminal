@@ -48,7 +48,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def intelligent_scheduling_coordinator(self) -> Agent:
         return Agent(
             config=self.agents_config['intelligent_scheduling_coordinator'], 
-            tools=[OutlookCalendarTool()], 
+            tools=[OutlookCalendarTool(), OrderManagementTool()], 
             llm=self.gemini_llm, 
             verbose=True,
             allow_delegation=False
