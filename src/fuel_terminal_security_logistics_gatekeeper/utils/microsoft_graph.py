@@ -1,53 +1,36 @@
 import os
-from O365 import Account, FileSystemTokenBackend
+from O365 import Account
 
 def get_ms_account():
-    # 1. Definimos la ruta absoluta (Evita el error NameError: project_root)
-    project_root = os.getcwd() 
-
-    # 2. Sincronización con tus nombres en GitHub
+    # 1. Captura de variables de entorno
     client_id = os.getenv('AZURE_CLIENT_ID')
     client_secret = os.getenv('AZURE_CLIENT_SECRET')
+    tenant_id = os.getenv('AZURE_TENANT_ID') # Vital para permisos de aplicación
     
-    # Verificación de seguridad y longitud corregida
     if client_secret:
-        print(f"DEBUG: Longitud del secreto detectada: {len(client_secret)}") 
+        print(f"DEBUG: Autenticando como Aplicación. Longitud del secreto: {len(client_secret)}") 
     else:
-        print("DEBUG: ERROR - El secreto AZURE_CLIENT_SECRET no se detectó (es None)")
+        print("DEBUG: ERROR - No se detectó AZURE_CLIENT_SECRET")
 
-    # Definición de credenciales final utilizando las variables capturadas
+    # Credenciales para flujo de aplicación
     credentials = (client_id, client_secret)
 
-    token_backend = FileSystemTokenBackend(
-        token_path=project_root, 
-        token_filename='o365_token.txt'
-    )
-
     try:
+        # CAMBIO CRÍTICO: Usamos auth_flow_type='credentials'
+        # Esto no requiere token_backend ni interacción humana (ignora MFA)
         account = Account(
             credentials, 
-            token_backend=token_backend, 
+            auth_flow_type='credentials',
+            tenant_id=tenant_id,
             main_resource='https://graph.microsoft.com/v1.0'
         )
         
-        # 3. Intentamos refrescar el token de forma silenciosa
-        # Esto es lo que evita que el bot pida una URL en la consola de GitHub
-        if account.connection.refresh_token():
+        # Intentamos autenticar la aplicación
+        if account.authenticate():
+            print("DEBUG: [OK] Autenticación de Aplicación exitosa.")
             return account
         
-        # 4. Intento final de autenticación con los scopes correctos
-        scopes = [
-            'https://graph.microsoft.com/Mail.Send',
-            'https://graph.microsoft.com/Files.ReadWrite.All',
-            'https://graph.microsoft.com/Calendars.ReadWrite',
-            'https://graph.microsoft.com/Sites.ReadWrite.All',
-            'https://graph.microsoft.com/User.Read.All'
-        ]
-
-        if account.authenticate(scopes=scopes):
-            return account
-        
-        print("ERROR_AUTH: No se pudo validar el token ni refrescarlo.")
+        print("ERROR_AUTH: Microsoft rechazó las credenciales de la aplicación.")
         return None
             
     except Exception as e:

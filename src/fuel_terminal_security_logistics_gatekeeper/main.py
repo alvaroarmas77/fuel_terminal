@@ -3,50 +3,27 @@ import os
 import sys
 from datetime import datetime
 
-# --- BYPASS PARA FORZAR GEMINI Y EVITAR ERROR DE OPENAI ---
+# --- BYPASS PARA FORZAR GEMINI ---
 os.environ["OPENAI_API_KEY"] = "fake-key-to-bypass-openai-check"
 os.environ["OTEL_SDK_DISABLED"] = "true"
-
-def verify_microsoft_token():
-    """
-    Verifica que el archivo o365_token.txt exista.
-    """
-    if os.path.exists("o365_token.txt"):
-        print("DEBUG: [OK] Archivo o365_token.txt detectado. Iniciando con autenticación por token.")
-    else:
-        print("DEBUG: [!] ERROR CRÍTICO: No se encontró o365_token.txt.")
-        print("Asegúrate de que la variable O365_TOKEN_JSON esté configurada en GitHub Secrets.")
 
 # --- BLOQUE DE SEGURIDAD DE LIBRERÍAS ---
 try:
     import O365
-    import msal
     print(f"DEBUG: Versión de O365 cargada: {getattr(O365, '__version__', 'Desconocida')}")
 except ImportError:
-    print("\n[!] ERROR CRÍTICO: Librerías O365 o msal no encontradas.")
+    print("\n[!] ERROR CRÍTICO: Librería O365 no encontrada.")
     sys.exit(1)
 
 # Importación del Crew
 try:
     from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
 except ImportError as e:
-    print(f"\n[!] ERROR DE IMPORTACIÓN: No se encuentra el paquete del Crew. {e}")
+    print(f"\n[!] ERROR DE IMPORTACIÓN: {e}")
     sys.exit(1)
 
 def run():
-    # --- BLOQUE DE RECONSTRUCCIÓN DEL TOKEN DESDE GITHUB SECRETS ---
-    # Python escribe el token de forma mucho más limpia que Bash
-    token_json = os.getenv('O365_TOKEN_JSON')
-    if token_json:
-        try:
-            with open('o365_token.txt', 'w', encoding='utf-8') as f:
-                f.write(token_json.strip())
-            print("DEBUG: [OK] Archivo o365_token.txt generado exitosamente desde la variable de entorno.")
-        except Exception as e:
-            print(f"DEBUG: [!] Error al escribir o365_token.txt: {e}")
-    
-    # --- PREPARACIÓN DE ENTORNO ---
-    verify_microsoft_token()
+    # Nota: Ya no generamos o365_token.txt porque usamos flujo de Aplicación (Client Credentials)
     
     ahora = datetime.now()
     
@@ -69,14 +46,13 @@ def run():
     }
 
     try:
-        print(f"\n--- Iniciando Crew para la Orden Maestra: {inputs['order_id']} ---")
+        print(f"\n--- Iniciando Crew (Modo Aplicación) para la Orden: {inputs['order_id']} ---")
         
-        # Ejecución
         crew_instance = FuelTerminalSecurityLogisticsGatekeeperCrew()
         gatekeeper_crew = crew_instance.crew()
         result = gatekeeper_crew.kickoff(inputs=inputs)
         
-        print(f"\n--- [RESULTADO FINAL DE LA OPERACIÓN] ---\n{result}")
+        print(f"\n--- [RESULTADO FINAL] ---\n{result}")
         
     except Exception as e:
         print(f"\n[ERROR CRÍTICO EN EL FLUJO]: {str(e)}")
