@@ -27,18 +27,15 @@ jobs:
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          # Instalamos todo el ecosistema necesario de una vez
-          pip install O365 msal pandas openpyxl \
-                      langchain-google-genai langchain-openai langchain-community \
-                      appdirs click embedchain instructor openai \
-                      opentelemetry-api opentelemetry-exporter-otlp-proto-http \
-                      opentelemetry-sdk python-dotenv regex
+          # 1. Instalamos CrewAI y dejamos que él decida sus versiones base
+          pip install crewai==0.28.0
           
-          # Forzamos las versiones de compatibilidad crítica
-          pip install pydantic==2.6.4 langchain-core==0.2.0 langsmith==0.1.31 langchain==0.1.20
+          # 2. Instalamos las librerías de Azure y Google
+          pip install O365 msal pandas openpyxl langchain-google-genai langchain-openai
           
-          # Instalamos CrewAI al final para que respete lo anterior
-          pip install crewai==0.28.0 --no-deps
+          # 3. CORRECCIÓN CRÍTICA: Forzamos la versión de langchain-core que 
+          # tiene tanto lo que necesita CrewAI como lo que necesita Google.
+          pip install "langchain-core>=0.1.52,<0.3.0" --upgrade
 
       - name: Ejecutar Gatekeeper
         run: |
