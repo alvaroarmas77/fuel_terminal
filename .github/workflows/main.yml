@@ -37,14 +37,7 @@ jobs:
           fi
           pip install -e .
 
-      - name: Generar archivo de token O365
-        run: |
-          # Creamos el archivo físico a partir del Secret de GitHub
-          echo '${{ secrets.O365_TOKEN_JSON }}' > o365_token.txt
-          chmod 600 o365_token.txt
-          ls -l o365_token.txt
-
       - name: Ejecutar Gatekeeper
         run: |
-          # Asegúrate de que esta ruta sea exacta en tu repo
+          # El archivo o365_token.txt se genera automáticamente dentro de main.py
           python src/fuel_terminal_security_logistics_gatekeeper/main.py

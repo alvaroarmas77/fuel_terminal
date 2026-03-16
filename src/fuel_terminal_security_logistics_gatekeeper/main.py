@@ -10,13 +10,12 @@ os.environ["OTEL_SDK_DISABLED"] = "true"
 def verify_microsoft_token():
     """
     Verifica que el archivo o365_token.txt exista.
-    En GitHub Actions, este archivo es creado por el paso anterior en el workflow.yml o por el bloque run().
     """
     if os.path.exists("o365_token.txt"):
         print("DEBUG: [OK] Archivo o365_token.txt detectado. Iniciando con autenticación por token.")
     else:
         print("DEBUG: [!] ERROR CRÍTICO: No se encontró o365_token.txt.")
-        print("Asegúrate de que el Workflow de GitHub esté creando el archivo correctamente o que la variable O365_TOKEN_JSON esté configurada.")
+        print("Asegúrate de que la variable O365_TOKEN_JSON esté configurada en GitHub Secrets.")
 
 # --- BLOQUE DE SEGURIDAD DE LIBRERÍAS ---
 try:
@@ -36,12 +35,12 @@ except ImportError as e:
 
 def run():
     # --- BLOQUE DE RECONSTRUCCIÓN DEL TOKEN DESDE GITHUB SECRETS ---
-    # Este bloque garantiza que si la variable de entorno existe, el archivo se cree en el directorio raíz.
+    # Python escribe el token de forma mucho más limpia que Bash
     token_json = os.getenv('O365_TOKEN_JSON')
     if token_json:
         try:
-            with open('o365_token.txt', 'w') as f:
-                f.write(token_json)
+            with open('o365_token.txt', 'w', encoding='utf-8') as f:
+                f.write(token_json.strip())
             print("DEBUG: [OK] Archivo o365_token.txt generado exitosamente desde la variable de entorno.")
         except Exception as e:
             print(f"DEBUG: [!] Error al escribir o365_token.txt: {e}")
