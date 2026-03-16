@@ -33,4 +33,6 @@ jobs:
 
       - name: Ejecutar Gatekeeper
         run: |
+          # Añadimos la carpeta actual al PATH de Python
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/src
           python src/fuel_terminal_security_logistics_gatekeeper/main.py
