@@ -9,6 +9,7 @@ def get_ms_account():
     # El segundo parámetro es el respaldo (ID referencial)
     client_id = os.getenv('AZURE_CLIENT_ID')
     client_secret = os.getenv('AZURE_CLIENT_SECRET')
+    print(f"DEBUG: Longitud del secreto: {len(secret) if secret else 0}")
     
     # El Secret NUNCA debe tener un respaldo hardcoded por seguridad
     client_secret = os.getenv('AZURE_CLIENT_SECRET') 
