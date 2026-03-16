@@ -6,19 +6,17 @@ def get_ms_account():
     project_root = os.getcwd() 
 
     # 2. Sincronización con tus nombres en GitHub
-    # El segundo parámetro es el respaldo (ID referencial)
     client_id = os.getenv('AZURE_CLIENT_ID')
     client_secret = os.getenv('AZURE_CLIENT_SECRET')
-    print(f"DEBUG: Longitud del secreto: {len(secret) if secret else 0}")
     
-    # El Secret NUNCA debe tener un respaldo hardcoded por seguridad
-    client_secret = os.getenv('AZURE_CLIENT_SECRET') 
+    # Verificación de seguridad y longitud corregida
+    if client_secret:
+        print(f"DEBUG: Longitud del secreto detectada: {len(client_secret)}") 
+    else:
+        print("DEBUG: ERROR - El secreto AZURE_CLIENT_SECRET no se detectó (es None)")
 
-    if not client_secret or not client_secret:
-        print("ERROR: Las variables de entorno de Azure no están cargadas correctamente.")
-        return None
-
-    credentials = (client_id, os.getenv('AZURE_CLIENT_SECRET'))
+    # Definición de credenciales final utilizando las variables capturadas
+    credentials = (client_id, client_secret)
 
     token_backend = FileSystemTokenBackend(
         token_path=project_root, 
