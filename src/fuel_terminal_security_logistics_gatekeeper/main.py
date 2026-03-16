@@ -52,7 +52,7 @@ def run():
     
     # --- CONFIGURACIÓN DE ENTRADAS (INPUTS) ---
     inputs = {
-        'dispatcher_email': 'logistics@terminal-sur.com',
+        'dispatcher_email': 'soportesap@frontera-virtual.com',
         'driver_name': 'Juan Pérez, Ricardo Gómez',
         'driver_email': 'juan.perez@transporte.com, ricardo.g@transporte.com',
         'plate_id': 'ABC-1234, XYZ-9876',
