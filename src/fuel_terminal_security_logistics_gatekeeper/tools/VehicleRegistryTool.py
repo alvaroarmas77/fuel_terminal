@@ -15,7 +15,7 @@ class VehicleRegistryTool(BaseTool):
     def _run(self, plate_id: str, driver_name: str) -> str:
         try:
             account = get_ms_account()
-            target_user = "logistica@tu-empresa.com"
+            target_user = "soportesap@frontera-virtual.com"
             drive = account.storage().get_drive_by_endpoint(target_user)
             
             root = drive.get_root()
@@ -34,8 +34,9 @@ class VehicleRegistryTool(BaseTool):
             ]
             
             if not match.empty:
-                return f"PHASE_2_SUCCESS: ACTIVOS VALIDADOS para {p_limpia}."
+                id_int = match['ID_Interno'].iloc[0]
+                return f"PHASE_2_SUCCESS: ACTIVOS VALIDADOS - ID: {id_int}."
             
-            return f"RECHAZO_FASE_2: Vehículo o conductor no autorizados."
+            return f"RECHAZO_FASE_2: Validación fallida para placa {p_limpia}."
         except Exception as e:
-            return f"ERROR_VEHICLE_TOOL: {str(e)}"
+            return f"ERROR_VEHICULOS: {str(e)}"

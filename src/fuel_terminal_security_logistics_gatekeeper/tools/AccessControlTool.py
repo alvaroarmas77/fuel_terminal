@@ -19,8 +19,7 @@ class AccessControlTool(BaseTool):
             if not account:
                 return "ERROR_CONEXIÓN: No se pudo conectar con Microsoft Graph."
 
-            # CAMBIO: Especificar el dueño del archivo
-            target_user = "logistica@tu-empresa.com" 
+            target_user = "soportesap@frontera-virtual.com"
             drive = account.storage().get_drive_by_endpoint(target_user)
             
             root = drive.get_root()
@@ -37,8 +36,9 @@ class AccessControlTool(BaseTool):
             
             if not match.empty:
                 nombre = match['Nombre'].iloc[0]
-                return f"PHASE_1_SUCCESS: ACCESO CONCEDIDO - Usuario: {nombre}."
+                empresa = match['Empresa'].iloc[0]
+                return f"PHASE_1_SUCCESS: ACCESO CONCEDIDO - Usuario: {nombre} - Empresa: {empresa}."
 
             return f"RECHAZO_FASE_1: El usuario {dispatcher_email} no tiene permisos."
         except Exception as e:
-            return f"ERROR_TOOL: {str(e)}"
+            return f"ERROR_OPERATIVO: {str(e)}"

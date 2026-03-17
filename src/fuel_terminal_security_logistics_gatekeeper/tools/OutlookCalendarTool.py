@@ -13,8 +13,7 @@ class OutlookCalendarTool(BaseTool):
     def _run(self, requested_datetime: str, plate_id: str) -> str:
         account = get_ms_account()
         try:
-            # CAMBIO: Especificar el recurso del calendario
-            target_user = "logistica@tu-empresa.com"
+            target_user = "soportesap@frontera-virtual.com"
             schedule = account.schedule(resource=target_user)
             
             start_dt = datetime.fromisoformat(requested_datetime)

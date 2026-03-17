@@ -12,8 +12,7 @@ class CommunicationsTool(BaseTool):
     def _run(self, recipient_email: str, subject: str, body: str) -> str:
         account = get_ms_account()
         try:
-            # CAMBIO: Especificar el buzón remitente
-            target_user = "logistica@tu-empresa.com"
+            target_user = "soportesap@frontera-virtual.com"
             mailbox = account.mailbox(target_user)
             message = mailbox.new_message()
             message.to.add(recipient_email)

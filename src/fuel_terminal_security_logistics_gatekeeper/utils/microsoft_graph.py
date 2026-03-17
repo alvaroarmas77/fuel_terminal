@@ -7,13 +7,12 @@ def get_ms_account():
     tenant_id = os.getenv('AZURE_TENANT_ID')
     
     if not all([client_id, client_secret, tenant_id]):
-        print("DEBUG: ERROR - Faltan variables de entorno (ID, Secret o Tenant)")
         return None
 
     credentials = (client_id, client_secret)
 
     try:
-        # Forzamos el protocolo para usar el Tenant específico (Evita el error de Secret)
+        # Forzamos el protocolo al Tenant específico para validar el secreto empresarial
         protocol = MSGraphProtocol(tenant_id=tenant_id)
         
         account = Account(
@@ -25,8 +24,6 @@ def get_ms_account():
         
         if account.authenticate():
             return account
-        
-        print("ERROR_AUTH: Microsoft rechazó las credenciales de la aplicación.")
         return None
             
     except Exception as e:

@@ -27,16 +27,17 @@ class OrderManagementTool(BaseTool):
             return "ERROR_CONEXIÓN: No se pudo acceder a Microsoft Graph."
 
         try:
-            # CONFIGURACIÓN HOLÍSTICA: Especificar el dueño de los archivos
-            target_user = "logistica@tu-empresa.com" # <--- CAMBIAR POR EL CORREO REAL
+            # CONFIGURACIÓN: El recurso es el correo de soporte
+            target_user = "soportesap@frontera-virtual.com"
             drive = account.storage().get_drive_by_endpoint(target_user)
             root = drive.get_root()
             
-            # Intentar localizar la carpeta y el archivo
+            # Localizar carpeta y archivo
             try:
                 folder = root.get_item('Fuel_Terminal_System')
                 file_item = folder.get_item('Master_Control_Orders.xlsx')
             except Exception:
+                # Si no está en la carpeta, intentar en la raíz
                 file_item = root.get_item('Master_Control_Orders.xlsx')
 
             # Descargar contenido actual
@@ -46,28 +47,28 @@ class OrderManagementTool(BaseTool):
             except Exception:
                 df = pd.read_excel(io.BytesIO(content), engine='openpyxl')
 
-            # ACCIÓN: READ (Lectura de orden)
+            # --- ACCIÓN: READ ---
             if action == "read":
                 if not order_id: return "ERROR: Se requiere order_id para leer."
                 result = df[df['OrderID'].astype(str) == str(order_id)]
                 return result.to_string() if not result.empty else "ORDEN_NO_ENCONTRADA"
 
-            # ACCIÓN: DELETE (Borrado de orden)
+            # --- ACCIÓN: DELETE ---
             if action == "delete":
                 if not order_id: return "ERROR: Se requiere order_id para borrar."
                 df = df[df['OrderID'].astype(str) != str(order_id)]
                 self._save_to_excel(file_item, df)
                 return f"ORDEN_{order_id}_ELIMINADA"
 
-            # ACCIÓN: CREATE (Registro de nueva orden o multi-unidad)
+            # --- ACCIÓN: CREATE ---
             if action == "create":
-                # Manejo de listas (separadas por comas) para procesos multi-unidad del Crew
+                # Lógica multi-unidad: permite procesar placas/conductores separados por coma
                 plates = [p.strip() for p in str(plate_id).split(',')]
                 drivers = [d.strip() for d in str(driver_name).split(',')]
                 volumes = [v.strip() for v in str(fuel_volume).split(',')]
                 
                 num_units = len(plates)
-                # Sincronizar listas si vienen longitudes distintas
+                # Sincronizar longitudes de listas
                 if len(drivers) < num_units: drivers = drivers * num_units
                 if len(volumes) < num_units: volumes = volumes * num_units
 
@@ -87,7 +88,7 @@ class OrderManagementTool(BaseTool):
                     }
                     new_entries.append(row)
                 
-                # Concatenar y guardar
+                # Concatenar y guardar cambios
                 df_final = pd.concat([df, pd.DataFrame(new_entries)], ignore_index=True)
                 self._save_to_excel(file_item, df_final)
                 
@@ -97,10 +98,9 @@ class OrderManagementTool(BaseTool):
             return f"ERROR_OPERATIVO_EXCEL: {str(e)}"
 
     def _save_to_excel(self, file_item, df):
-        """Función auxiliar para subir el archivo actualizado a la nube"""
+        """Sube el archivo actualizado a Microsoft Graph"""
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False)
         output.seek(0)
-        # Sube y sobrescribe el archivo en SharePoint/OneDrive
         file_item.upload(output)
