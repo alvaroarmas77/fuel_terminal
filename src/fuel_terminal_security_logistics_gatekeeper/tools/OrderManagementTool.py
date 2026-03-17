@@ -24,46 +24,50 @@ class OrderManagementTool(BaseTool):
         
         account = get_ms_account()
         if not account:
-            return "ERROR_CONEXIÓN: No se pudo acceder a Excel."
+            return "ERROR_CONEXIÓN: No se pudo acceder a Microsoft Graph."
 
         try:
-            drive = account.storage().get_default_drive()
+            # CONFIGURACIÓN HOLÍSTICA: Especificar el dueño de los archivos
+            target_user = "logistica@tu-empresa.com" # <--- CAMBIAR POR EL CORREO REAL
+            drive = account.storage().get_drive_by_endpoint(target_user)
             root = drive.get_root()
-            folder = root.get_item('Fuel_Terminal_System')
-            file_item = folder.get_item('Master_Control_Orders.xlsx')
             
+            # Intentar localizar la carpeta y el archivo
+            try:
+                folder = root.get_item('Fuel_Terminal_System')
+                file_item = folder.get_item('Master_Control_Orders.xlsx')
+            except Exception:
+                file_item = root.get_item('Master_Control_Orders.xlsx')
+
+            # Descargar contenido actual
             content = file_item.download()
             try:
                 df = pd.read_excel(io.BytesIO(content))
             except Exception:
                 df = pd.read_excel(io.BytesIO(content), engine='openpyxl')
 
-            # --- LÓGICA DE LECTURA (Para Agente 3) ---
+            # ACCIÓN: READ (Lectura de orden)
             if action == "read":
-                result = df[df['OrderID'] == order_id]
-                if result.empty:
-                    return f"ERROR: No se encontró la orden {order_id}."
-                
-                # Retornamos los detalles para que el Agente 3 sepa qué borrar en Outlook
-                detalles = result[['Assigned Island', 'Appointment Date', 'Start Time']].to_dict('records')
-                return f"DATOS_ORDEN: {str(detalles)}"
+                if not order_id: return "ERROR: Se requiere order_id para leer."
+                result = df[df['OrderID'].astype(str) == str(order_id)]
+                return result.to_string() if not result.empty else "ORDEN_NO_ENCONTRADA"
 
-            # --- LÓGICA DE ELIMINACIÓN (Para Agente 4) ---
-            elif action == "delete":
-                if order_id not in df['OrderID'].values:
-                    return f"ERROR: La orden {order_id} no existe en el registro."
-                
-                new_df = df[df['OrderID'] != order_id]
-                self._save_to_excel(file_item, new_df)
-                return f"CANCELACIÓN_EXITOSA: La orden {order_id} ha sido borrada del registro maestro."
+            # ACCIÓN: DELETE (Borrado de orden)
+            if action == "delete":
+                if not order_id: return "ERROR: Se requiere order_id para borrar."
+                df = df[df['OrderID'].astype(str) != str(order_id)]
+                self._save_to_excel(file_item, df)
+                return f"ORDEN_{order_id}_ELIMINADA"
 
-            # --- LÓGICA DE REGISTRO (Original) ---
-            else:
+            # ACCIÓN: CREATE (Registro de nueva orden o multi-unidad)
+            if action == "create":
+                # Manejo de listas (separadas por comas) para procesos multi-unidad del Crew
                 plates = [p.strip() for p in str(plate_id).split(',')]
                 drivers = [d.strip() for d in str(driver_name).split(',')]
                 volumes = [v.strip() for v in str(fuel_volume).split(',')]
                 
                 num_units = len(plates)
+                # Sincronizar listas si vienen longitudes distintas
                 if len(drivers) < num_units: drivers = drivers * num_units
                 if len(volumes) < num_units: volumes = volumes * num_units
 
@@ -83,16 +87,20 @@ class OrderManagementTool(BaseTool):
                     }
                     new_entries.append(row)
                 
-                new_df = pd.concat([df, pd.DataFrame(new_entries)], ignore_index=True)
-                self._save_to_excel(file_item, new_df)
-                return f"REGISTRO_EXITOSO: Se han registrado {num_units} unidades bajo la orden {order_id}."
-            
+                # Concatenar y guardar
+                df_final = pd.concat([df, pd.DataFrame(new_entries)], ignore_index=True)
+                self._save_to_excel(file_item, df_final)
+                
+                return f"REGISTRO_EXITOSO: {num_units} unidades registradas bajo la orden {order_id}."
+
         except Exception as e:
-            return f"ERROR_OPERATIVO: Detalle: {str(e)}"
+            return f"ERROR_OPERATIVO_EXCEL: {str(e)}"
 
     def _save_to_excel(self, file_item, df):
+        """Función auxiliar para subir el archivo actualizado a la nube"""
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False)
         output.seek(0)
-        file_item.update_contents(output.read())
+        # Sube y sobrescribe el archivo en SharePoint/OneDrive
+        file_item.upload(output)

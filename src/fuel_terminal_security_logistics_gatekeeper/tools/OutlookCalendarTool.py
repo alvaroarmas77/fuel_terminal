@@ -1,7 +1,4 @@
-import sys
-import os
 from datetime import datetime, timedelta
-from O365 import Account, FileSystemTokenBackend
 from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
 
 try:
@@ -11,42 +8,34 @@ except ImportError:
 
 class OutlookCalendarTool(BaseTool):
     name: str = "outlook_calendar_tool"
-    description: str = "Verifica disponibilidad en las 7 islas (Terminal_Isla_1 a 7) y reserva slots de 30 min."
+    description: str = "Reserva slots en los calendarios de las islas."
 
     def _run(self, requested_datetime: str, plate_id: str) -> str:
-        # Usamos la conexión centralizada que ya tiene FileSystemTokenBackend corregido
         account = get_ms_account()
-        if not account:
-            return "ERROR_CONEXIÓN: No se pudo acceder a la cuenta para verificar calendarios."
-
         try:
-            schedule = account.schedule()
-            # Convertimos el string de fecha a objeto datetime
+            # CAMBIO: Especificar el recurso del calendario
+            target_user = "logistica@tu-empresa.com"
+            schedule = account.schedule(resource=target_user)
+            
             start_dt = datetime.fromisoformat(requested_datetime)
             end_dt = start_dt + timedelta(minutes=30)
             
-            # Lista de nombres de calendarios según tu estructura
             islands = [f"Terminal_Isla_{i}" for i in range(1, 8)]
             
             for island_name in islands:
                 try:
                     calendar = schedule.get_calendar(calendar_name=island_name)
-                    # Consultamos si hay eventos en ese rango exacto
-                    events = calendar.get_events(
-                        query=f"start/dateTime ge '{start_dt.isoformat()}' and end/dateTime le '{end_dt.isoformat()}'"
-                    )
+                    events = calendar.get_events(query=f"start/dateTime ge '{start_dt.isoformat()}'")
                     
-                    # Si la lista de eventos está vacía, la isla está libre
                     if not any(events):
                         new_event = calendar.new_event()
-                        new_event.subject = f"Carga Combustible: {plate_id}"
+                        new_event.subject = f"Carga: {plate_id}"
                         new_event.start = start_dt
                         new_event.end = end_dt
                         new_event.save()
-                        return f"SLOT_RESERVADO: Isla: {island_name}, Inicio: {start_dt.strftime('%H:%M')}, Fin: {end_dt.strftime('%H:%M')}"
-                except Exception:
-                    continue # Si un calendario no existe o falla, probamos el siguiente
+                        return f"SLOT_RESERVADO: Isla: {island_name}."
+                except: continue
             
-            return "SLOT_OCUPADO: No se encontraron espacios disponibles en ninguna de las 7 islas para ese horario."
+            return "SLOT_OCUPADO: Sin disponibilidad."
         except Exception as e:
             return f"ERROR_CALENDARIO: {str(e)}"
