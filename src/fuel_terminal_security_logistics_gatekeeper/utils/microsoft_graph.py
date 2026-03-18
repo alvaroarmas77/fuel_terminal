@@ -2,9 +2,9 @@ import os
 from O365 import Account, MSGraphProtocol
 
 def get_ms_account():
-    client_id = os.getenv('AZURE_CLIENT_ID')
-    client_secret = os.getenv('AZURE_CLIENT_SECRET')
-    tenant_id = os.getenv('AZURE_TENANT_ID')
+    client_id = os.getenv('AZURE_CLIENT_ID').strip()
+    client_secret = os.getenv('AZURE_CLIENT_SECRET').strip()
+    tenant_id = os.getenv('AZURE_TENANT_ID').strip()
     
     if not all([client_id, client_secret, tenant_id]):
         return None

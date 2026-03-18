@@ -10,7 +10,7 @@ os.environ["OTEL_SDK_DISABLED"] = "true"
 # --- BLOQUE DE SEGURIDAD DE LIBRERÍAS ---
 try:
     import O365
-    print(f"DEBUG: Versión de O365 cargada: {getattr(O365, '__version__', 'Desconocida')}")
+    print(f"DEBUG: Versión de O365 cargada: {getattr(O365, '__version__', 'Desconocida')}\")
 except ImportError:
     print("\n[!] ERROR CRÍTICO: Librería O365 no encontrada.")
     sys.exit(1)
@@ -18,13 +18,25 @@ except ImportError:
 # Importación del Crew
 try:
     from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
+    # Importamos la función de conexión para la validación previa
+    from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
 except ImportError as e:
     print(f"\n[!] ERROR DE IMPORTACIÓN: {e}")
     sys.exit(1)
 
 def run():
-    # Nota: Ya no generamos o365_token.txt porque usamos flujo de Aplicación (Client Credentials)
+    # --- VALIDACIÓN PREVIA DE CONEXIÓN (PUNTO 5) ---
+    # Si el secreto está bien pero hay un error de red o handshake, el script muere aquí
+    # antes de llamar a Gemini y gastar la cuota.
+    print("DEBUG: Verificando conexión con Microsoft Graph antes de iniciar Crew...")
+    account = get_ms_account()
+    if not account:
+        print("\n[!] ERROR CRÍTICO: No se pudo establecer conexión con Microsoft Azure.")
+        print("Revisa que el CLIENT_SECRET sea el 'Value' y que el Tenant ID sea correcto.")
+        sys.exit(1)
     
+    print("DEBUG: Conexión exitosa. Iniciando motor de agentes...")
+
     ahora = datetime.now()
     
     # --- CONFIGURACIÓN DE ENTRADAS (INPUTS) ---
@@ -46,16 +58,10 @@ def run():
     }
 
     try:
-        print(f"\n--- Iniciando Crew (Modo Aplicación) para la Orden: {inputs['order_id']} ---")
-        
-        crew_instance = FuelTerminalSecurityLogisticsGatekeeperCrew()
-        gatekeeper_crew = crew_instance.crew()
-        result = gatekeeper_crew.kickoff(inputs=inputs)
-        
-        print(f"\n--- [RESULTADO FINAL] ---\n{result}")
-        
+        print(f"\n--- Iniciando Crew para la Orden: {inputs['order_id']} ---\n")
+        FuelTerminalSecurityLogisticsGatekeeperCrew().crew().kickoff(inputs=inputs)
     except Exception as e:
-        print(f"\n[ERROR CRÍTICO EN EL FLUJO]: {str(e)}")
+        print(f"\n[!] ERROR DURANTE LA EJECUCIÓN: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
