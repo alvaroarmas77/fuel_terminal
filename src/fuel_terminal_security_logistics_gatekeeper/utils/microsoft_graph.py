@@ -11,7 +11,7 @@ def get_ms_account():
 
     credentials = (client_id, client_secret)
     
-    # El protocolo DEBE tener el tenant_id para que el Secret sea reconocido
+    # CRÍTICO: El protocolo debe conocer el Tenant antes de autenticar
     protocol = MSGraphProtocol(tenant_id=tenant_id)
     
     try:
@@ -22,7 +22,7 @@ def get_ms_account():
             protocol=protocol
         )
         
-        # En modo aplicación, el scope SIEMPRE debe ser /.default
+        # El scope /.default es obligatorio para Application Permissions
         if account.authenticate(scope=['https://graph.microsoft.com/.default']):
             return account
         return None
