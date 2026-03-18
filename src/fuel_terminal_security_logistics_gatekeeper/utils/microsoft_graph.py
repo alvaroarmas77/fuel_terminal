@@ -10,11 +10,11 @@ def get_ms_account():
         return None
 
     credentials = (client_id, client_secret)
-
+    
+    # El protocolo DEBE tener el tenant_id para que el Secret sea reconocido
+    protocol = MSGraphProtocol(tenant_id=tenant_id)
+    
     try:
-        # Forzamos el protocolo al Tenant específico para validar el secreto empresarial
-        protocol = MSGraphProtocol(tenant_id=tenant_id)
-        
         account = Account(
             credentials, 
             auth_flow_type='credentials',
@@ -22,10 +22,9 @@ def get_ms_account():
             protocol=protocol
         )
         
-        if account.authenticate():
+        # En modo aplicación, el scope SIEMPRE debe ser /.default
+        if account.authenticate(scope=['https://graph.microsoft.com/.default']):
             return account
         return None
-            
-    except Exception as e:
-        print(f"ERROR_SISTEMA: {str(e)}")
+    except Exception:
         return None

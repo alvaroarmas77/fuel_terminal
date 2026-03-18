@@ -10,33 +10,26 @@ except ImportError:
 
 class VehicleRegistryTool(BaseTool):
     name: str = "vehicle_registry_tool"
-    description: str = "Valida la placa y conductor en el registro de vehículos."
+    description: str = "Valida placa y conductor en Vehicle_registry"
 
     def _run(self, plate_id: str, driver_name: str) -> str:
+        account = get_ms_account()
+        target_user = "soportesap@frontera-virtual.com"
         try:
-            account = get_ms_account()
-            target_user = "soportesap@frontera-virtual.com"
             drive = account.storage().get_drive_by_endpoint(target_user)
+            file_item = drive.get_root().get_item('Fuel_Terminal_System').get_item('Master_Control.xlsx')
             
-            root = drive.get_root()
-            folder = root.get_item('Fuel_Terminal_System')
-            file_item = folder.get_item('Master_Control.xlsx')
-                
             content = file_item.download()
-            df_veh = pd.read_excel(io.BytesIO(content), sheet_name="Vehicle_registry")
+            df = pd.read_excel(io.BytesIO(content), sheet_name="Vehicle_registry")
             
             p_limpia = str(plate_id).strip().upper()
             d_limpio = str(driver_name).strip().lower()
             
-            match = df_veh[
-                (df_veh['Truck Plate'].astype(str).str.strip().upper() == p_limpia) & 
-                (df_veh['Driver Name'].astype(str).str.strip().lower() == d_limpio)
-            ]
+            match = df[(df['Truck Plate'].astype(str).str.upper() == p_limpia) & 
+                       (df['Driver Name'].astype(str).str.lower() == d_limpio)]
             
             if not match.empty:
-                id_int = match['ID_Interno'].iloc[0]
-                return f"PHASE_2_SUCCESS: ACTIVOS VALIDADOS - ID: {id_int}."
-            
-            return f"RECHAZO_FASE_2: Validación fallida para placa {p_limpia}."
+                return f"PHASE_2_SUCCESS: ACTIVOS VALIDADOS para {p_limpia}"
+            return f"RECHAZO_FASE_2: Datos no encontrados."
         except Exception as e:
-            return f"ERROR_VEHICULOS: {str(e)}"
+            return f"ERROR: {str(e)}"

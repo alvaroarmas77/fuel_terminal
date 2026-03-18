@@ -27,7 +27,8 @@ class OrderManagementTool(BaseTool):
             return "ERROR_CONEXIÓN: No se pudo acceder a Microsoft Graph."
 
         try:
-            # CONFIGURACIÓN: El recurso es el correo de soporte
+            # CONFIGURACIÓN APPLICATION: El recurso es el correo de soporte
+            # Esto permite que la App acceda al Drive de este usuario específico
             target_user = "soportesap@frontera-virtual.com"
             drive = account.storage().get_drive_by_endpoint(target_user)
             root = drive.get_root()
@@ -98,7 +99,7 @@ class OrderManagementTool(BaseTool):
             return f"ERROR_OPERATIVO_EXCEL: {str(e)}"
 
     def _save_to_excel(self, file_item, df):
-        """Sube el archivo actualizado a Microsoft Graph"""
+        """Sube el archivo actualizado a Microsoft Graph (Modo Application)"""
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False)
