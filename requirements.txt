@@ -8,7 +8,7 @@ langchain-google-genai>=2.0.0
 
 # --- MANEJO DE DATOS Y EXCEL (MANTENIDOS) ---
 pandas==2.2.2
-openpyxl==3.1.0
+openpyxl
 xlrd>=2.0.1
 pyarrow
 
