@@ -1,11 +1,14 @@
 import pandas as pd
 import io
 from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
-from crewai.tools import BaseTool
+try:
+    from crewai.tools import BaseTool
+except ImportError:
+    from crewai_tools import BaseTool
 
 class AccessControlTool(BaseTool):
     name: str = "access_control_tool"
-    description: str = "Valida la identidad del despachador en Master_Control.xls"
+    description: str = "Valida la identidad del despachador en Master_Control.xlsx"
 
     def _run(self, dispatcher_email: str) -> str:
         account = get_ms_account()
@@ -16,7 +19,7 @@ class AccessControlTool(BaseTool):
             drive = account.storage().get_drive_by_endpoint(target_user)
             # Nota: Asegurar que el nombre del archivo sea exacto (xls vs xlsx)
             folder = drive.get_root().get_item('Fuel_Terminal_System')
-            file_item = folder.get_item('Master_Control.xls') 
+            file_item = folder.get_item('Master_Control.xlsx') 
             
             content = file_item.download()
             df = pd.read_excel(io.BytesIO(content), sheet_name="Authorized_Users")

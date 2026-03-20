@@ -3,7 +3,7 @@ from crewai.project import CrewBase, agent, crew, task
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
 
-# Importación de Herramientas
+# Importación de Herramientas (Asegúrate de que las rutas sean correctas)
 from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
 from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool import VehicleRegistryTool
 from fuel_terminal_security_logistics_gatekeeper.tools.OutlookCalendarTool import OutlookCalendarTool
@@ -16,22 +16,21 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        # Forzamos Gemini 3.1
+        # 3. INYECCIÓN DE LLM: Usamos la versión estable de Gemini
+        # Forzamos temperature 0 para decisiones de seguridad (sin alucinaciones)
         self.gemini_llm = ChatGoogleGenerativeAI(
-            model="gemini/gemini-3.1-pro-preview",
+            model="gemini/gemini-3.1-pro-preview", # Versión recomendada por estabilidad
             temperature=0,
             google_api_key=os.getenv("GOOGLE_API_KEY")
         )
 
-    # --- AGENTES ---
     @agent
     def security_authentication_specialist(self) -> Agent:
         return Agent(
             config=self.agents_config['security_authentication_specialist'], 
             tools=[AccessControlTool()], 
-            llm=self.gemini_llm, 
-            verbose=True,
-            allow_delegation=False
+            llm=self.gemini_llm, # Mapeo explícito
+            verbose=True
         )
 
     @agent
@@ -39,9 +38,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
         return Agent(
             config=self.agents_config['registry_validation_specialist'], 
             tools=[VehicleRegistryTool()], 
-            llm=self.gemini_llm, 
-            verbose=True,
-            allow_delegation=False
+            llm=self.gemini_llm,
+            verbose=True
         )
 
     @agent
@@ -49,9 +47,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
         return Agent(
             config=self.agents_config['intelligent_scheduling_coordinator'], 
             tools=[OutlookCalendarTool(), OrderManagementTool()], 
-            llm=self.gemini_llm, 
-            verbose=True,
-            allow_delegation=False
+            llm=self.gemini_llm,
+            verbose=True
         )
 
     @agent
@@ -59,9 +56,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
         return Agent(
             config=self.agents_config['order_logging_specialist'], 
             tools=[OrderManagementTool()], 
-            llm=self.gemini_llm, 
-            verbose=True,
-            allow_delegation=False
+            llm=self.gemini_llm,
+            verbose=True
         )
 
     @agent
@@ -70,49 +66,29 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['multi_channel_communications_manager'],
             tools=[CommunicationsTool()],
             llm=self.gemini_llm,
-            verbose=True,
-            allow_delegation=False
+            verbose=True
         )
 
-    # --- TAREAS ---
+    # --- TAREAS (Se mantienen igual, pero heredan el contexto) ---
     @task
     def phase_1___user_authentication(self) -> Task:
-        return Task(
-            config=self.tasks_config['phase_1___user_authentication'], 
-            agent=self.security_authentication_specialist()
-        )
+        return Task(config=self.tasks_config['phase_1___user_authentication'], agent=self.security_authentication_specialist())
 
     @task
     def phase_2___registry_validation(self) -> Task:
-        return Task(
-            config=self.tasks_config['phase_2___registry_validation'], 
-            agent=self.registry_validation_specialist(),
-            context=[self.phase_1___user_authentication()]
-        )
+        return Task(config=self.tasks_config['phase_2___registry_validation'], agent=self.registry_validation_specialist(), context=[self.phase_1___user_authentication()])
 
     @task
     def phase_3___access_control(self) -> Task:
-        return Task(
-            config=self.tasks_config['phase_3___access_control'], 
-            agent=self.intelligent_scheduling_coordinator(),
-            context=[self.phase_2___registry_validation()]
-        )
+        return Task(config=self.tasks_config['phase_3___access_control'], agent=self.intelligent_scheduling_coordinator(), context=[self.phase_2___registry_validation()])
 
     @task
     def phase_4___order_logging(self) -> Task:
-        return Task(
-            config=self.tasks_config['phase_4___order_logging'], 
-            agent=self.order_logging_specialist(),
-            context=[self.phase_3___access_control()]
-        )
+        return Task(config=self.tasks_config['phase_4___order_logging'], agent=self.order_logging_specialist(), context=[self.phase_3___access_control()])
 
     @task
     def phase_5___multi_channel_communications(self) -> Task:
-        return Task(
-            config=self.tasks_config['phase_5___multi_channel_communications'], 
-            agent=self.multi_channel_communications_manager(),
-            context=[self.phase_4___order_logging()]
-        )
+        return Task(config=self.tasks_config['phase_5___multi_channel_communications'], agent=self.multi_channel_communications_manager(), context=[self.phase_4___order_logging()])
 
     @crew
     def crew(self) -> Crew:
@@ -120,6 +96,6 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
-            verbose=True,
-            manager_llm=self.gemini_llm
+            manager_llm=self.gemini_llm, # Crucial para el flujo secuencial inteligente
+            verbose=True
         )

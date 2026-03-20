@@ -1,7 +1,10 @@
 import pandas as pd
 import io
 from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
-from crewai.tools import BaseTool
+try:
+    from crewai.tools import BaseTool
+except ImportError:
+    from crewai_tools import BaseTool
 
 class VehicleRegistryTool(BaseTool):
     name: str = "vehicle_registry_tool"
@@ -19,7 +22,7 @@ class VehicleRegistryTool(BaseTool):
             file_item = folder.get_item('Master_Control.xlsx')
             
             content = file_item.download()
-            df = pd.read_excel(io.BytesIO(content), sheet_name="Vehicle_registry")
+            df = pd.read_excel(io.BytesIO(content), sheet_name="Vehicle_Registry")
             
             # Normalización para búsqueda exacta
             p_limpia = str(plate_id).strip().upper()

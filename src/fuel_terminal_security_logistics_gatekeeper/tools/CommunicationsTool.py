@@ -1,5 +1,8 @@
 from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
-from crewai.tools import BaseTool
+try:
+    from crewai.tools import BaseTool
+except ImportError:
+    from crewai_tools import BaseTool
 
 class CommunicationsTool(BaseTool):
     name: str = "communications_tool"

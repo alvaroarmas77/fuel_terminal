@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
-from crewai.tools import BaseTool
+try:
+    from crewai.tools import BaseTool
+except ImportError:
+    from crewai_tools import BaseTool
 
 class OutlookCalendarTool(BaseTool):
     name: str = "outlook_calendar_tool"
