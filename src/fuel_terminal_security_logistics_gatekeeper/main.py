@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import os
+secret = os.getenv("AZURE_CLIENT_SECRET", "")
+print(f"DEBUG: Longitud del secreto cargado: {len(secret)}")
 import sys
 from datetime import datetime
 from dotenv import load_dotenv

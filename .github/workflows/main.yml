@@ -29,7 +29,7 @@ jobs:
           # Inyectamos aquí, igual que en el proyecto que SI funciona
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_CLIENT_SECRET: "${{ secrets.AZURE_CLIENT_SECRET }}"
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           # Usamos la ruta absoluta de GitHub workspace para evitar errores de path
           PYTHONPATH: ${{ github.workspace }}/src
