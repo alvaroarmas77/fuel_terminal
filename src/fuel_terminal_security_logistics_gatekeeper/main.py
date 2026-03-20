@@ -2,37 +2,21 @@
 import os
 import sys
 from datetime import datetime
+from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
+from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
 
-# --- BYPASS PARA FORZAR GEMINI ---
-os.environ["OPENAI_API_KEY"] = "fake-key-to-bypass-openai-check"
+# Bypass para telemetría y OpenAI
+os.environ["OPENAI_API_KEY"] = "fake-key"
 os.environ["OTEL_SDK_DISABLED"] = "true"
 
-# --- BLOQUE DE SEGURIDAD DE LIBRERÍAS ---
-try:
-    import O365
-    print(f"DEBUG: Versión de O365 cargada: {getattr(O365, '__version__', 'Desconocida')}")
-except ImportError:
-    print("\n[!] ERROR CRÍTICO: Librería O365 no encontrada.")
-    sys.exit(1)
-
-# Importación del Crew y la utilidad de conexión
-try:
-    from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
-    from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
-except ImportError as e:
-    print(f"\n[!] ERROR DE IMPORTACIÓN: {e}")
-    sys.exit(1)
-
 def run():
-    # --- VALIDACIÓN PREVIA (Punto de control para no quemar tokens de Gemini) ---
-    print("DEBUG: Validando credenciales de Microsoft Graph...")
+    print("DEBUG: Validando conexión con Microsoft Azure...")
     account = get_ms_account()
     if not account:
-        print("\n[!] ERROR: La conexión con Azure falló. El proceso se detiene para proteger la cuota de API.")
+        print("\n[!] ERROR CRÍTICO: No se pudo establecer conexión con Microsoft Graph.")
         sys.exit(1)
     
-    print("DEBUG: Conexión exitosa. Iniciando agentes...")
-
+    print("DEBUG: Conexión exitosa. Iniciando Crew...")
     ahora = datetime.now()
     
     inputs = {
@@ -53,11 +37,9 @@ def run():
     }
 
     try:
-        print(f"\n--- Ejecutando Gatekeeper: {inputs['order_id']} ---\n")
         FuelTerminalSecurityLogisticsGatekeeperCrew().crew().kickoff(inputs=inputs)
     except Exception as e:
-        print(f"\n[!] ERROR EN EJECUCIÓN: {e}")
-        sys.exit(1)
+        print(f"ERROR: {e}")
 
 if __name__ == "__main__":
     run()

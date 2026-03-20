@@ -9,12 +9,6 @@ jobs:
   execute-gatekeeper:
     runs-on: ubuntu-latest
     
-    env:
-      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -31,7 +25,14 @@ jobs:
           pip install -r requirements.txt
 
       - name: Ejecutar Gatekeeper
+        env:
+          # Inyectamos aquí, igual que en el proyecto que SI funciona
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          # Usamos la ruta absoluta de GitHub workspace para evitar errores de path
+          PYTHONPATH: ${{ github.workspace }}/src
         run: |
-          # Aseguramos que Python encuentre el paquete 'src'
-          export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+          # Ejecución directa sin exports manuales
           python src/fuel_terminal_security_logistics_gatekeeper/main.py

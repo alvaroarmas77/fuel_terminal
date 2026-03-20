@@ -1,12 +1,7 @@
-import os
 import pandas as pd
 import io
 from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
-
-try:
-    from crewai_tools import BaseTool
-except ImportError:
-    from crewai.tools import BaseTool
+from crewai_tools import BaseTool
 
 class AccessControlTool(BaseTool):
     name: str = "access_control_tool"
@@ -19,9 +14,9 @@ class AccessControlTool(BaseTool):
         target_user = "soportesap@frontera-virtual.com"
         try:
             drive = account.storage().get_drive_by_endpoint(target_user)
-            root = drive.get_root()
-            folder = root.get_item('Fuel_Terminal_System')
-            file_item = folder.get_item('Master_Control.xls')
+            # Nota: Asegurar que el nombre del archivo sea exacto (xls vs xlsx)
+            folder = drive.get_root().get_item('Fuel_Terminal_System')
+            file_item = folder.get_item('Master_Control.xls') 
             
             content = file_item.download()
             df = pd.read_excel(io.BytesIO(content), sheet_name="Authorized_Users")
@@ -31,7 +26,7 @@ class AccessControlTool(BaseTool):
             
             match = df[df['Email'] == email_check]
             if not match.empty:
-                return f"PHASE_1_SUCCESS: ACCESO CONCEDIDO - {match['Nombre'].iloc[0]}"
-            return f"RECHAZO_FASE_1: Usuario {dispatcher_email} no autorizado."
+                return "PHASE_1_SUCCESS"
+            return f"RECHAZO_FASE_1: {dispatcher_email} no autorizado."
         except Exception as e:
             return f"ERROR_OPERATIVO: {str(e)}"
