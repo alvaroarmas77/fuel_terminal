@@ -1,7 +1,7 @@
 import pandas as pd
 import io
 from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 
 class VehicleRegistryTool(BaseTool):
     name: str = "vehicle_registry_tool"
