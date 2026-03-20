@@ -23,16 +23,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip' # Esto acelera las ejecuciones futuras
+          cache: 'pip'
 
-      - name: Instalar Dependencias (Estrategia Holística)
+      - name: Instalar Dependencias
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Ejecutar Gatekeeper
         run: |
-          # Añadimos la carpeta src al path de Python
+          # Aseguramos que Python encuentre el paquete 'src'
           export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-          # Ejecutamos el script
           python src/fuel_terminal_security_logistics_gatekeeper/main.py
