@@ -4,24 +4,25 @@ import sys
 from datetime import datetime
 from dotenv import load_dotenv
 
-# 1. CARGA DE ENTORNO
+# Cargamos el entorno (Secrets en GitHub o .env local)
 load_dotenv()
 
-# SOLUCIÓN DE BLINDAJE: Mapeo de la llave real para evitar conflictos de proveedores
-real_key = os.getenv("GOOGLE_API_KEY")
-if real_key:
-    # Aseguramos que la librería use la llave real incluso si busca OPENAI_API_KEY
-    os.environ["OPENAI_API_KEY"] = real_key.strip() 
-
+# SOLUCIÓN DE BLINDAJE: Eliminamos el 'fake-key' para que no interfiera con la clase LLM
 os.environ["OTEL_SDK_DISABLED"] = "true"
 
-# Importación de la Crew
 from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
 
 def run():
     print("DEBUG: Iniciando Gatekeeper System...")
     ahora = datetime.now()
     
+    # Verificación de integridad de la llave (sin mostrarla)
+    key = os.getenv("GOOGLE_API_KEY")
+    if not key:
+        print("ERROR: GOOGLE_API_KEY no encontrada en el entorno.")
+        sys.exit(1)
+    print(f"DEBUG: API KEY detectada (Longitud: {len(key)})")
+
     inputs = {
         'dispatcher_email': 'cliente_prueba@empresa.com',
         'driver_email': 'conductor1@transporte.com, conductor2@transporte.com', 
@@ -35,9 +36,6 @@ def run():
     }
 
     try:
-        # Validación de blindaje en el log (sin exponer la llave)
-        print(f"DEBUG: Longitud de la API KEY activa: {len(real_key) if real_key else 0} caracteres")
-        
         FuelTerminalSecurityLogisticsGatekeeperCrew().crew().kickoff(inputs=inputs)
     except Exception as e:
         print(f"ERROR DURANTE LA EJECUCIÓN: {e}")

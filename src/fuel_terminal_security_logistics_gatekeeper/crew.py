@@ -1,6 +1,5 @@
-from crewai import Agent, Crew, Process, Task
+from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
-from langchain_openai import ChatOpenAI
 import os
 
 # Importación de Herramientas
@@ -16,14 +15,13 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        # SOLUCIÓN MAESTRA: 
-        # 1. Eliminamos el prefijo 'gemini/' para que LiteLLM no intente usar el SDK de Google.
-        # 2. GitHub Models acepta el nombre del modelo directo si el base_url es correcto.
-        self.gemini_llm = ChatOpenAI(
-            model="gemini-3.1-pro-preview", 
-            openai_api_key=os.getenv("GOOGLE_API_KEY"),
-            openai_api_base="https://models.inference.ai.azure.com",
-            temperature=0
+        # SOLUCIÓN DEFINITIVA: Uso de la clase LLM nativa de crewAI
+        # Esto elimina el conflicto de 'API_KEY_INVALID' al usar el protocolo correcto de Google
+        self.gemini_llm = LLM(
+            model="gemini/gemini-1.5-pro", # O gemini-3.1-pro-preview según disponibilidad
+            api_key=os.getenv("GOOGLE_API_KEY"),
+            temperature=0.1,
+            max_rpm=10
         )
 
     @agent
@@ -32,8 +30,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['security_authentication_specialist'],
             tools=[AccessControlTool()],
             llm=self.gemini_llm,
-            verbose=True,
-            allow_delegation=False
+            verbose=True
         )
 
     @agent
@@ -42,8 +39,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['registry_validation_specialist'],
             tools=[VehicleRegistryTool()],
             llm=self.gemini_llm,
-            verbose=True,
-            allow_delegation=False
+            verbose=True
         )
 
     @agent
@@ -52,8 +48,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['intelligent_scheduling_coordinator'],
             tools=[OutlookCalendarTool()],
             llm=self.gemini_llm,
-            verbose=True,
-            allow_delegation=False
+            verbose=True
         )
 
     @agent
@@ -62,8 +57,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['order_logging_specialist'],
             tools=[OrderManagementTool()],
             llm=self.gemini_llm,
-            verbose=True,
-            allow_delegation=False
+            verbose=True
         )
 
     @agent
@@ -72,11 +66,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['multi_channel_communications_manager'],
             tools=[CommunicationsTool()],
             llm=self.gemini_llm,
-            verbose=True,
-            allow_delegation=False
+            verbose=True
         )
-
-    # --- TAREAS (Se mantienen exactamente igual) ---
 
     @task
     def phase_1___user_authentication(self) -> Task:
