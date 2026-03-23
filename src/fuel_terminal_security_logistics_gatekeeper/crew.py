@@ -1,9 +1,10 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI # Cambio clave para compatibilidad con GitHub Models
+from dotenv import load_dotenv
 import os
 
-# Importación de Herramientas (Asegúrate que la ruta de carpetas sea correcta)
+# Importación de Herramientas
 from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
 from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool import VehicleRegistryTool
 from fuel_terminal_security_logistics_gatekeeper.tools.OutlookCalendarTool import OutlookCalendarTool
@@ -16,11 +17,14 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        # Alineación con el modelo solicitado y temperatura 0 para tareas logísticas
-        self.gemini_llm = ChatGoogleGenerativeAI(
-            model="google_ai_studio/gemini-3.1-pro-preview", 
-            temperature=0,
-            google_api_key=os.getenv("GOOGLE_API_KEY")
+        load_dotenv()
+        # Usamos ChatOpenAI como puente para GitHub Models
+        # Esto permite que el string "gemini/gemini-3.1-pro-preview" pase directo al proxy
+        self.gemini_llm = ChatOpenAI(
+            model="gemini/gemini-3.1-pro-preview",
+            openai_api_key=os.getenv("GOOGLE_API_KEY"),
+            openai_api_base="https://models.inference.ai.azure.com", # Endpoint estándar de GitHub Models
+            temperature=0
         )
 
     @agent
@@ -30,7 +34,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             tools=[AccessControlTool()],
             llm=self.gemini_llm,
             verbose=True,
-            allow_delegation=False # Evita bucles innecesarios en autenticación
+            allow_delegation=False
         )
 
     @agent
@@ -73,7 +77,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             allow_delegation=False
         )
 
-    # --- DEFINICIÓN DE TAREAS CON CONTEXTO SECUENCIAL ---
+    # --- DEFINICIÓN DE TAREAS ---
 
     @task
     def phase_1___user_authentication(self) -> Task:
@@ -92,7 +96,6 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @task
     def phase_3___access_control(self) -> Task:
-        # IMPORTANTE: Esta fase depende de la validación técnica anterior (Phase 2)
         return Task(
             config=self.tasks_config['phase_3___access_control'], 
             agent=self.intelligent_scheduling_coordinator(), 
