@@ -71,8 +71,7 @@ class AccessControlTool(BaseTool):
 
             # Normalización de la columna del DataFrame usando el accesor .str
             # Esto evita el error: 'Series' object has no attribute 'lower'
-            df['Email'] = df['Email'].astype(str).str.strip().lower()
-            
+            df['Email'] = df['Email'].astype(str).str.strip().lower() #supuesto cambio
             # Búsqueda de coincidencia
             match = df[df['Email'] == email_check]
             
