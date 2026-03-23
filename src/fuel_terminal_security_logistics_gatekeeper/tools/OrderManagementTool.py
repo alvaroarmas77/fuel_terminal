@@ -6,6 +6,7 @@ import urllib.parse
 from datetime import datetime
 from crewai.tools import BaseTool
 from pydantic import Field
+from typing import Optional, Type, Any
 
 class OrderManagementTool(BaseTool):
     name: str = "order_management_tool"
@@ -15,7 +16,6 @@ class OrderManagementTool(BaseTool):
         "de asignación de islas y horarios para cada camión."
     )
     
-    # Campo definido para evitar errores de validación en CrewAI
     target_user: str = Field(default="soportesap@frontera-virtual.com")
 
     def _get_token(self):
@@ -34,10 +34,9 @@ class OrderManagementTool(BaseTool):
             'scope': 'https://graph.microsoft.com/.default'
         }
         try:
-            # Timeout añadido para estabilidad en la nube
             res = requests.post(token_url, data=data, timeout=20)
             return res.json().get('access_token')
-        except:
+        except Exception:
             return None
 
     def _run(self, action: str = "create", order_id: str = None, dispatcher_email: str = None, 
@@ -49,88 +48,102 @@ class OrderManagementTool(BaseTool):
         if not token: 
             return "ERROR_CONEXIÓN_AZURE"
 
-        # --- CORRECCIÓN DE RUTA (Sincronizada con las otras herramientas) ---
         file_name = "Fuel_Terminal_System/Master_Control_Orders.xlsx"
         encoded_path = urllib.parse.quote(file_name)
         content_url = f"https://graph.microsoft.com/v1.0/users/{self.target_user}/drive/root:/{encoded_path}:/content"
 
-        headers_upload = {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/octet-stream'
-        }
-        
-        headers_download = {
+        headers_base = {
             'Authorization': f'Bearer {token}'
         }
 
         try:
-            # 1. Intentar descargar el archivo actual
-            res_download = requests.get(content_url, headers=headers_download, timeout=30)
+            # 1. INTENTAR DESCARGAR EL ARCHIVO ACTUAL
+            res_download = requests.get(content_url, headers=headers_base, timeout=30)
             
             if res_download.status_code == 200:
-                # Se especifica openpyxl para compatibilidad en runners de GitHub
                 df = pd.read_excel(io.BytesIO(res_download.content), engine='openpyxl')
+                # Limpieza preventiva de nombres de columnas
+                df.columns = [str(c).strip() for c in df.columns]
             else:
-                # Si el archivo no existe (404) o hay error, crear estructura base
+                # Si el archivo no existe, creamos la estructura maestra
                 df = pd.DataFrame(columns=[
                     'OrderID', 'Date_of_Request', 'dispatcher_email', 'Driver_Email', 
-                    'truck_plate', 'Driver_Name', 'Fuel Volume (Gallons)', 
+                    'truck_plate', 'Driver_Name', 'Fuel Volume', 
                     'Assigned Island', 'Appointment Date', 'Start Time', 'End Time'
                 ])
 
+            # --- ACCIÓN: CREATE (REGISTRO DE NUEVA ORDEN) ---
             if action == "create":
-                # Procesamiento multi-unidad (separa por comas si vienen varios)
-                # Normalización preventiva con .strip()
-                plates = [p.strip() for p in str(truck_plate).split(',')]
-                drivers = [d.strip() for d in str(driver_name).split(',')]
-                volumes = [v.strip() for v in str(fuel_volume).split(',')]
+                # Manejo de entradas múltiples (separadas por coma)
+                plates = [p.strip() for p in str(truck_plate).split(',')] if truck_plate else []
+                drivers = [d.strip() for d in str(driver_name).split(',')] if driver_name else []
+                volumes = [v.strip() for v in str(fuel_volume).split(',')] if fuel_volume else []
                 
                 new_entries = []
                 num_units = len(plates)
 
+                if num_units == 0:
+                    return "ERROR_DATOS: No se proporcionaron placas de camión."
+
                 for i in range(num_units):
-                    # Lógica de asignación: usa el índice o el primer elemento si no hay suficientes
-                    d_name = drivers[i] if i < len(drivers) else (drivers[0] if drivers else "")
-                    f_vol = volumes[i] if i < len(volumes) else (volumes[0] if volumes else "")
+                    # Lógica de emparejamiento para conductores y volúmenes
+                    d_name = drivers[i] if i < len(drivers) else (drivers[0] if drivers else "N/A")
+                    f_vol = volumes[i] if i < len(volumes) else (volumes[0] if volumes else "0")
                     
                     new_entries.append({
                         'OrderID': str(order_id),
                         'Date_of_Request': datetime.now().strftime('%Y-%m-%d'),
-                        'dispatcher_email': dispatcher_email,
-                        'Driver_Email': "pendiente@correo.com",
-                        'truck_plate': plates[i].upper(),
+                        'dispatcher_email': str(dispatcher_email),
+                        'Driver_Email': "pendiente@correo.com", # Se llena en fase posterior
+                        'truck_plate': str(plates[i]).upper(),
                         'Driver_Name': d_name,
-                        'Fuel Volume (Gallons)': f_vol,
-                        'Assigned Island': assigned_island,
-                        'Appointment Date': appointment_date,
-                        'Start Time': start_time,
-                        'End Time': end_time
+                        'Fuel Volume': f_vol,
+                        'Assigned Island': str(assigned_island) if assigned_island else "TBD",
+                        'Appointment Date': str(appointment_date) if appointment_date else "TBD",
+                        'Start Time': str(start_time) if start_time else "--:--",
+                        'End Time': str(end_time) if end_time else "--:--"
                     })
                 
-                # Crear DataFrame de nuevas entradas y concatenar
                 df_new = pd.DataFrame(new_entries)
                 df_final = pd.concat([df, df_new], ignore_index=True)
                 
-                # 2. Guardar en memoria y subir a OneDrive
+                # Guardar y Subir
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     df_final.to_excel(writer, index=False)
                 
-                # Subida de contenido binario (PUT reemplaza el archivo con la nueva versión)
+                headers_upload = {
+                    'Authorization': f'Bearer {token}',
+                    'Content-Type': 'application/octet-stream'
+                }
+                
                 res_upload = requests.put(content_url, headers=headers_upload, data=output.getvalue(), timeout=30)
                 
                 if res_upload.status_code in [200, 201]:
-                    return f"ORDEN REGISTRADA: {num_units} unidades bajo ID {order_id}."
+                    return f"PHASE_4_SUCCESS|ORDEN REGISTRADA: {num_units} unidades bajo ID {order_id}."
                 else:
                     return f"ERROR_AL_GUARDAR: {res_upload.status_code} - {res_upload.text}"
 
+            # --- ACCIÓN: READ (CONSULTA DE ÓRDENES) ---
             elif action == "read":
-                # Normalización para búsqueda robusta
-                df['OrderID'] = df['OrderID'].astype(str).str.strip()
-                result = df[df['OrderID'] == str(order_id).strip()]
-                return result.to_string() if not result.empty else "ORDEN_NO_ENCONTRADA"
+                if not order_id:
+                    return "ERROR: Se requiere OrderID para la lectura."
+                
+                search_id = str(order_id).strip().lower()
+                matches = []
 
-            return "ACCION_SOLICITADA_NO_VALIDA"
+                # BÚSQUEDA MANUAL BLINDADA (Igual que AccessControlTool)
+                for _, row in df.iterrows():
+                    current_id = str(row.get('OrderID', '')).strip().lower()
+                    if current_id == search_id:
+                        matches.append(row.to_dict())
+                
+                if not matches:
+                    return "ORDEN_NO_ENCONTRADA"
+                
+                return f"RESULTADOS_ORDEN|{str(matches)}"
+
+            return "ERROR: Acción solicitada ('{}') no es válida.".format(action)
 
         except Exception as e:
             return f"ERROR_OPERATIVO_EXCEL: {str(e)}"
