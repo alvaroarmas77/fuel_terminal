@@ -3,7 +3,7 @@ from crewai.project import CrewBase, agent, crew, task
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
 
-# Importación de Herramientas (Asegúrate de que las rutas sean correctas)
+# Importación de Herramientas
 from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
 from fuel_terminal_security_logistics_gatekeeper.tools.VehicleRegistryTool import VehicleRegistryTool
 from fuel_terminal_security_logistics_gatekeeper.tools.OutlookCalendarTool import OutlookCalendarTool
@@ -16,10 +16,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        # 3. INYECCIÓN DE LLM: Usamos la versión estable de Gemini
-        # Forzamos temperature 0 para decisiones de seguridad (sin alucinaciones)
         self.gemini_llm = ChatGoogleGenerativeAI(
-            model="gemini/gemini-3.1-pro-preview", # Versión recomendada por estabilidad
+            model="gemini-1.5-pro",
             temperature=0,
             google_api_key=os.getenv("GOOGLE_API_KEY")
         )
@@ -27,17 +25,17 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     @agent
     def security_authentication_specialist(self) -> Agent:
         return Agent(
-            config=self.agents_config['security_authentication_specialist'], 
-            tools=[AccessControlTool()], 
-            llm=self.gemini_llm, # Mapeo explícito
+            config=self.agents_config['security_authentication_specialist'],
+            tools=[AccessControlTool()],
+            llm=self.gemini_llm,
             verbose=True
         )
 
     @agent
     def registry_validation_specialist(self) -> Agent:
         return Agent(
-            config=self.agents_config['registry_validation_specialist'], 
-            tools=[VehicleRegistryTool()], 
+            config=self.agents_config['registry_validation_specialist'],
+            tools=[VehicleRegistryTool()],
             llm=self.gemini_llm,
             verbose=True
         )
@@ -45,8 +43,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     @agent
     def intelligent_scheduling_coordinator(self) -> Agent:
         return Agent(
-            config=self.agents_config['intelligent_scheduling_coordinator'], 
-            tools=[OutlookCalendarTool(), OrderManagementTool()], 
+            config=self.agents_config['intelligent_scheduling_coordinator'],
+            tools=[OutlookCalendarTool()],
             llm=self.gemini_llm,
             verbose=True
         )
@@ -54,8 +52,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     @agent
     def order_logging_specialist(self) -> Agent:
         return Agent(
-            config=self.agents_config['order_logging_specialist'], 
-            tools=[OrderManagementTool()], 
+            config=self.agents_config['order_logging_specialist'],
+            tools=[OrderManagementTool()],
             llm=self.gemini_llm,
             verbose=True
         )
@@ -69,7 +67,6 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             verbose=True
         )
 
-    # --- TAREAS (Se mantienen igual, pero heredan el contexto) ---
     @task
     def phase_1___user_authentication(self) -> Task:
         return Task(config=self.tasks_config['phase_1___user_authentication'], agent=self.security_authentication_specialist())
@@ -96,6 +93,5 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
-            manager_llm=self.gemini_llm, # Crucial para el flujo secuencial inteligente
             verbose=True
         )

@@ -16,8 +16,9 @@ class VehicleRegistryTool(BaseTool):
         
         target_user = "soportesap@frontera-virtual.com"
         try:
+            # CAMBIO MÍNIMO: Asegurar el uso de get_drive_by_endpoint con target_user
             drive = account.storage().get_drive_by_endpoint(target_user)
-            # Acceso a la carpeta y archivo
+            
             folder = drive.get_root().get_item('Fuel_Terminal_System')
             file_item = folder.get_item('Master_Control.xlsx')
             

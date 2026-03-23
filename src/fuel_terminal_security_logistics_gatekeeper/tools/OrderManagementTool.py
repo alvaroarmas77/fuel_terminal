@@ -25,15 +25,18 @@ class OrderManagementTool(BaseTool):
              assigned_island: str = None, appointment_date: str = None, 
              start_time: str = None, end_time: str = None) -> str:
         
-        # Obtenemos la cuenta ya autenticada (Modo Aplicación)
         account = get_ms_account()
         if not account:
             return "ERROR_CONEXIÓN: Fallo de autenticación en Microsoft Graph."
 
         try:
             target_user = "soportesap@frontera-virtual.com"
+            # CAMBIO MÍNIMO: Especificar resource para permisos de Aplicación
             drive = account.storage().get_drive_by_endpoint(target_user)
+            
             root = drive.get_root()
+            folder = root.get_item('Fuel_Terminal_System')
+            file_item = folder.get_item('Master_Control_Orders.xlsx')
             
             # Lógica original de búsqueda de carpeta/archivo
             try:

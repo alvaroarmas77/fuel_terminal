@@ -1,32 +1,12 @@
-# --- BASE CREWAI (ACTUALIZADO PARA IGUALAR PROYECTO EXITOSO) ---
-# Subimos de 0.28.0 a >=0.100.1 como en tu proyecto de referencia
 crewai>=0.100.1
 crewai-tools>=0.1.7
-# Actualizamos Pydantic a la versión estable que usas en el otro proyecto
 pydantic==2.10.4
 langchain-google-genai>=2.0.0
-
-# --- MANEJO DE DATOS Y EXCEL (MANTENIDOS) ---
 pandas==2.2.2
 openpyxl
 xlrd>=2.0.1
-pyarrow
-
-# --- CONECTIVIDAD MICROSOFT (O365) (OPTIMIZADO) ---
-O365>=2.0.36
-msal>=1.22.0
 requests>=2.31.0
-requests-oauthlib>=1.3.1
-cryptography>=42.0.0
-pyjwt>=2.8.0
-
-# --- UTILIDADES Y CONFIGURACIÓN ---
-# Añadimos pysqlite3-binary que es vital para Runners de GitHub (estaba en tu proyecto exitoso)
 pysqlite3-binary
 python-dotenv==1.0.0
-pytz==2024.1
-google-generativeai>=0.8.0
 pyyaml
-
-# --- ESTABILIDAD ---
-setuptools>=69.0.0
+google-generativeai>=0.8.0
