@@ -18,11 +18,12 @@ def run():
     print("DEBUG: Iniciando Gatekeeper System...")
     ahora = datetime.now()
     
-    # Inputs optimizados para multi-unidad
+    # Inputs homogeneizados con tasks.yaml
+    # Nota: Mantenemos plate_id temporalmente por compatibilidad con las herramientas físicas
     inputs = {
-        'dispatcher_email': 'soportesap@frontera-virtual.com',
+        'dispatcher_email': 'cliente_prueba@empresa.com',
+        'driver_email': 'conductor1@transporte.com, conductor2@transporte.com', 
         'driver_name': 'Juan Pérez, Ricardo Gómez',
-        'plate_id': 'ABC-1234, XYZ-9876',
         'truck_plate': 'ABC-1234, XYZ-9876', 
         'requested_datetime': ahora.strftime('%Y-%m-%dT%H:00:00'), 
         'current_date': ahora.strftime('%Y-%m-%d'),
@@ -32,6 +33,7 @@ def run():
     }
 
     try:
+        # Ejecución con los inputs alineados
         FuelTerminalSecurityLogisticsGatekeeperCrew().crew().kickoff(inputs=inputs)
     except Exception as e:
         print(f"ERROR DURANTE LA EJECUCIÓN: {e}")

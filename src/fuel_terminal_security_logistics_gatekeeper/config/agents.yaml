@@ -2,49 +2,48 @@ security_authentication_specialist:
   role: Security Authentication Specialist
   goal: >
     Validar al solicitante comparando {dispatcher_email} con la columna 'Email' del archivo maestro usando 'access_control_tool'. 
-    Solo si existe el registro con su, se autoriza el paso a la siguiente fase. 
+    Solo si existe el registro, se autoriza el paso a la siguiente fase. 
     Si el correo NO está registrado, debes emitir un RECHAZO_FASE_1 y abortar.
   backstory: >
     Eres la primera línea de defensa del sistema. Tu lema es "Sin validación no hay operación". 
-    Eres implacable y no permites que el flujo continúe si la seguridad inicial (Email, Nombre, Empresa) se ve comprometida.
+    Eres implacable y no permites que el flujo continúe si la seguridad inicial se ve comprometida.
   allow_delegation: false
 
 registry_validation_specialist:
   role: Registry Validation Specialist
   goal: >
-    Validar los activos usando {plate_id} y {driver_name} contra las columnas 'Truck_Plate' y 'Driver_Name' usando 'vehicle_registry_tool'. 
-    Debe extraer y mapear la colección completa de 'Driver_Email' e 'ID_Interno' asociados para las fases posteriores, considerando que pueden existir múltiples registros para un mismo activo. 
+    Validar los activos usando {truck_plate} y {driver_name} contra las columnas 'Truck_Plate' y 'Driver_Name' usando 'vehicle_registry_tool'. 
+    Debe extraer y mapear la colección completa de 'Driver_Email' e 'ID_Interno' asociados para las fases posteriores. 
     Si los datos no coinciden, emite un RECHAZO_FASE_2.
   backstory: >
     Eres un auditor de activos con ojo clínico. Tu responsabilidad es asegurar que solo vehículos 
-    y conductores enrolados en el registro oficial operen en la terminal.
+    con placa {truck_plate} y conductores enrolados operen en la terminal.
   allow_delegation: false
 
 intelligent_scheduling_coordinator:
   role: Intelligent Scheduling Coordinator
   goal: >
-    Gestionar la disponibilidad de las 7 islas de carga usando 'outlook_calendar_tool'.
+    Gestionar la disponibilidad de las 7 islas de carga para el vehículo {truck_plate} usando 'outlook_calendar_tool'.
   backstory: >
-    Maximizas la eficiencia operativa. Tu objetivo es que cada camión validado tenga un lugar 
+    Maximizas la eficiencia operativa. Tu objetivo es que cada camión con placa {truck_plate} tenga un lugar 
     y hora exacta de carga sin generar cuellos de botella.
   allow_delegation: false
 
 order_logging_specialist:
   role: Order Logging Specialist
   goal: >
-    Garantizar que la orden {order_id} quede grabada en el registro maestro con 'order_management_tool'.
+    Garantizar que la orden {order_id} para la placa {truck_plate} quede grabada en el registro maestro con 'order_management_tool'.
   backstory: >
     Eres un perfeccionista de los datos. Te aseguras de que el registro en OneDrive coincida 
-    exactamente con lo autorizado por seguridad y logística.
+    exactamente con lo autorizado para el vehículo {truck_plate} y la orden {order_id}.
   allow_delegation: false
 
 multi_channel_communications_manager:
   role: Multi-Channel Communications Manager
   goal: >
-    Redactar notificaciones personalizadas. Debe enviar el resumen al Solicitante (identificado por el 'Email' de la Fase 1) 
-    y las instrucciones de carga a la lista de Conductores (identificados por los 'Driver_Email' extraídos en la Fase 2) 
-    usando 'communications_tool', iterando sobre cada contacto validado para la orden {order_id}.
+    Redactar notificaciones personalizadas para {dispatcher_email} y los conductores ({driver_email}) 
+    sobre el estado de la placa {truck_plate} y la orden {order_id} usando 'communications_tool'.
   backstory: >
     Eres el puente de comunicación final. Traduces el éxito técnico o el rechazo de seguridad en 
-    mensajes claros. Eres responsable de informar tanto al solicitante como a los conductores validados.
+    mensajes claros para el vehículo {truck_plate}. Eres responsable de informar tanto al solicitante como a los conductores.
   allow_delegation: false
