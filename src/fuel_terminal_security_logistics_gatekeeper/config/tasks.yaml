@@ -3,7 +3,7 @@ phase_1___user_authentication:
     ACCIÓN OBLIGATORIA DE SEGURIDAD: 
     1. Usa la herramienta 'access_control_tool' para buscar {dispatcher_email}. Verifica que existan datos en la columna 'Email', si el resultado es exitoso, guarda estos datos como el "Solicitante Autorizado".
     2. La herramienta leerá 'Master_Control.xlsx' en la pestaña 'Authorized_Users'.
-    3. REGLA DE DETENCIÓN CRÍTICA: Si el resultado de la herramienta comienza con 'RECHAZO_FASE_1', 
+    3. REGLA DE DETENCIÓN CRÍTICA: Si el resultado de la herramienta comienza con 'RECHAZO_FASE_1' o 'ERROR_CONEXIÓN', 
        DEBES ABORTAR el flujo de trabajo inmediatamente. No intentes ejecutar ninguna otra tarea.
     4. RESPUESTA DE ERROR: Si hay rechazo, retorna un mensaje final indicando: "PROCESO DETENIDO: El usuario {dispatcher_email} no tiene permisos de acceso".
     5. Solo si el resultado de la herramienta es exitoso, se considera validado y puedes dar paso a la siguiente fase de validación de activos.
@@ -15,23 +15,23 @@ phase_1___user_authentication:
 
 phase_2___registry_validation:
   description: >
-    REGLA DE DEPENDENCIA: Esta tarea SOLO debe ejecutarse si la 'phase_1___user_authentication' devolvió 'PHASE_1_SUCCESS'.
+    REGLA DE DEPENDENCIA CRÍTICA: Revisa el output de 'phase_1___user_authentication'.
+    ESTA TAREA SOLO DEBE EJECUTARSE si el resultado anterior fue 'PHASE_1_SUCCESS'. 
+    Si la fase anterior falló o indica PROCESO DETENIDO, finaliza tu ejecución inmediatamente reportando el mismo error.
     
     INSTRUCCIONES DE VALIDACIÓN MULTI-REGISTRO:
      1. Usa `vehicle_registry_tool` para consultar la placa {truck_plate}. 
      2. CONSIDERACIÓN DE MULTIPLICIDAD: Identifica que para la placa {truck_plate} pueden existir múltiples conductores ({driver_name}), correos electrónicos y IDs internos vinculados en la pestaña 'Vehicle_registry'.
      3. RECOPILACIÓN DE DATOS: Extrae y valida la vigencia de todos los activos asociados. Debes mapear cada instancia encontrada de 'Truck_Plate', 'Driver_Name', 'Driver_Email' e 'ID_Interno'.
      4. CRITERIO DE FILTRADO: Si el {driver_name} proporcionado inicialmente no coincide con los registros, verifica si existe como conductor alternativo autorizado para esa misma placa antes de rechazar.
-     5. REGLA DE DETENCIÓN: Si tras validar la lista completa el resultado es 'RECHAZO_FASE_2' (ej. placa vencida o ningún conductor autorizado vigente), DEBES ABORTAR la asignación de islas.
-     6. ACCIÓN EN CASO DE FALLO: Si la validación falla para los activos solicitados, genera un mensaje detallando si el error es por la Placa, por el/los Conductores, o por falta de registros vigentes (Seguro/Inspección).
-
+     5. REGLA DE DETENCIÓN: Si tras validar la lista completa el resultado es 'RECHAZO_FASE_2', DEBES ABORTAR la asignación de islas.
+     6. ACCIÓN EN CASO DE FALLO: Si la validación falla para los activos solicitados, genera un mensaje detallando si el error es por la Placa, por el/los Conductores, o por falta de registros vigentes.
   expected_output: >
     Un dictamen de aptitud técnica estructurado que incluya:
-    1. ESTADO: (ÉXITO o RECHAZO).
-    2. DETALLE DE ACTIVOS: Un resumen de la placa {truck_plate} y la lista de todos los conductores y correos electrónicos validados y autorizados encontrados en el registro.
-    3. FORMATO ÉXITO: "ACTIVOS VALIDADOS - Vehículo: {truck_plate}. Conductores Autorizados: [Lista de nombres]. Correos vinculados: [Lista de emails]. Todos los registros están vigentes. Proceder a asignación de isla."
-    4. FORMATO RECHAZO: "PROCESO DETENIDO: Error en validación de activos para la placa {truck_plate}. Motivo: [Indicar si es por vencimiento de documento o conductor no registrado]."
-  
+    1. ESTADO: (PHASE_2_SUCCESS o RECHAZO).
+    2. DETALLE DE ACTIVOS: Resumen de placa {truck_plate} y lista de conductores autorizados.
+    3. FORMATO ÉXITO: "PHASE_2_SUCCESS - Vehículo: {truck_plate}. Todos los registros están vigentes. Proceder a asignación de isla."
+    4. FORMATO RECHAZO: "PROCESO DETENIDO: Error en validación de activos para la placa {truck_plate}."
   agent: registry_validation_specialist
 
 phase_3___access_control:
@@ -39,64 +39,51 @@ phase_3___access_control:
     VERIFICACIÓN DE SEGURIDAD OBLIGATORIA: 
     Antes de proceder, verifica que 'phase_1___user_authentication' haya devuelto 'PHASE_1_SUCCESS' 
     y que 'phase_2___registry_validation' haya devuelto 'PHASE_2_SUCCESS'. 
-    Si alguna de las validaciones previas falló o indica un 'RECHAZO', NO busques espacios en el calendario y finaliza aquí.
+    REGLA DE GUARDA: Si alguna de las validaciones previas falló o indica un 'RECHAZO' o 'ERROR_CONEXIÓN', 
+    NO uses herramientas, NO busques espacios en el calendario y finaliza con 'BLOQUEO'.
 
     INSTRUCCIONES DE PROGRAMACIÓN (Solo si los pasos anteriores son exitosos):
-    1. Accede a los 7 calendarios de Outlook (Terminal_Isla_1 hasta Terminal_Isla_7) de la cuenta de logística.
-    2. Busca disponibilidad para el slot solicitado en {requested_datetime} con una duración de 30 minutos.
-    3. REGLA DE NO TRASLAPE: El slot debe estar completamente libre; no se permiten citas encimadas.
-    4. ACCIÓN DE RESERVA: Si encuentras un espacio libre, reserva el slot usando la placa {truck_plate} como asunto de la cita.
-    5. GESTIÓN DE OCUPADO: Si el horario está ocupado en todas las islas, identifica y propón los 3 espacios de 30 minutos más cercanos (posteriores) que estén disponibles en cualquier isla.
-
+    1. Accede a los 7 calendarios de Outlook (Terminal_Isla_1 a Terminal_Isla_7).
+    2. Busca disponibilidad para {requested_datetime} (30 min).
+    3. REGLA DE NO TRASLAPE: El slot debe estar completamente libre.
+    4. ACCIÓN DE RESERVA: Si encuentras espacio, reserva usando la placa {truck_plate}.
+    5. GESTIÓN DE OCUPADO: Si no hay cupo, propón los 3 espacios de 30 minutos más cercanos.
   expected_output: >
-    Un dictamen de programación estructurado:
-    - ÉXITO: "SLOT CONFIRMADO - Isla: [Número de Isla] - Horario: [Hora Inicio] a [Hora Fin]. Los activos y el despachador han sido validados previamente."
-    - ALTERNATIVA: "SLOT NO DISPONIBLE - El horario solicitado está ocupado. Sugerencias: 1. [Opción 1], 2. [Opción 2], 3. [Opción 3]."
-    - BLOQUEO: "OPERACIÓN CANCELADA - No se procedió con la búsqueda de slots debido a fallos en la validación de seguridad previa."
+    Un dictamen de programación:
+    - ÉXITO: "PHASE_3_SUCCESS - Isla: [Número] - Horario confirmados."
+    - ALTERNATIVA: "SLOT NO DISPONIBLE - Sugerencias: [Opciones]."
+    - BLOQUEO: "OPERACIÓN CANCELADA - No se procedió por fallos en validación previa."
   agent: intelligent_scheduling_coordinator
 
 phase_4___order_logging:
   description: >
-    VERIFICACIÓN DE FLUJO Y PROCESAMIENTO MULTI-UNIDAD:
-    1. Revisa los resultados de las validaciones previas. Solo procede si hay slots confirmados en la Fase 3.
-    2. GESTIÓN DE CARGA MÚLTIPLE: Identifica si la solicitud contiene una lista de múltiples camiones ({truck_plate}), 
-       conductores ({driver_name}) o volúmenes ({fuel_volume}).
-    3. REGLA DE REGISTRO Y EDICIÓN: Usa la herramienta 'order_management_tool' para crear, leer o actualizar entradas en 'Master_Control_Orders.xlsx'. El agente tiene autoridad para llenar o borrar contenido debajo de los encabezados según sea necesario para reflejar la realidad de la orden.
-    4. MAPEO DE COLUMNAS OBLIGATORIO: Debes asegurar que se llenen los campos: OrderID (usando {order_id}), Date_of_Request (usando {current_date}), dispatcher_email (usando {dispatcher_email}), Driver_Email, truck_plate (usando {truck_plate}), Driver_Name, Fuel Volume (Gallons), Assigned Island, Appointment Date, Start Time y End Time.
-    5. ATRIBUTO DE VINCULACIÓN: Todas las entradas de una misma solicitud deben compartir el mismo {order_id} para quedar agrupadas bajo la misma orden maestra.
-    6. Ejecuta la herramienta de forma iterativa hasta que todos los activos validados estén registrados físicamente.
-
+    VERIFICACIÓN DE FLUJO Y GUARDA DE DATOS:
+    1. REGLA DE DEPENDENCIA ABSOLUTA: Revisa los resultados de Fase 1, 2 y 3. 
+       SOLO PROCEDE si el resultado de Fase 3 es 'PHASE_3_SUCCESS'. 
+       Si recibiste 'OPERACIÓN CANCELADA' o 'BLOQUEO' en las fases previas, NO utilices 'order_management_tool' y finaliza tu tarea informando la cancelación.
+    2. GESTIÓN DE CARGA MÚLTIPLE: Identifica camiones ({truck_plate}), conductores ({driver_name}) y volúmenes ({fuel_volume}).
+    3. REGLA DE REGISTRO: Usa 'order_management_tool' para crear o actualizar entradas en 'Master_Control_Orders.xlsx'.
+    4. MAPEO DE COLUMNAS: OrderID ({order_id}), Date_of_Request ({current_date}), dispatcher_email ({dispatcher_email}), Driver_Email, truck_plate ({truck_plate}), Driver_Name, Fuel Volume, Assigned Island, Appointment Date, Start Time y End Time.
+    5. ATRIBUTO DE VINCULACIÓN: Mismo {order_id} para toda la orden maestra.
+    6. Ejecuta iterativamente hasta registrar todos los activos confirmados en Fase 3.
   expected_output: >
-    Un reporte de consolidación de registros:
-    - ÉXITO: "ORDEN MULTI-UNIDAD REGISTRADA - ID Maestro: {order_id}. Se han procesado [Número de filas] filas para los vehículos validados en las columnas correspondientes."
-    - ERROR: "FALLO DE REGISTRO: No se pudieron escribir los datos en el Excel. Verificar conexión con OneDrive."
+    Reporte de consolidación:
+    - ÉXITO: "PHASE_4_SUCCESS - ID Maestro: {order_id}. Registros completados en Excel."
+    - ERROR: "FALLO DE REGISTRO: Error de conexión o validación previa no cumplida."
   agent: order_logging_specialist
 
 phase_5___multi_channel_communications:
   description: >
     REGLA DE CIERRE FINAL:
-    1. Recupera el {dispatcher_email} validado en la Phase_1 como el Solicitante Autorizado.
-    2. Recupera la lista de correos de conductores obtenidos de la validación en la Phase_2 (mapeados a {driver_email}).
-    3. Usa 'communications_tool' para:
-       - Enviar al Solicitante ({dispatcher_email}) el estado de la orden {order_id} y la confirmación de todos los vehículos con placa {truck_plate}.
-       - Enviar a cada Conductor ({driver_email}) su isla asignada y hora de carga.
-       - Si el proceso se detuvo en fases previas, informa únicamente al {dispatcher_email} sobre la cancelación.
-
-    INSTRUCCIONES ADICIONALES DE COMUNICACIÓN:
-    1. Revisa el resultado de 'phase_4___order_logging'. 
-    2. Solo si el registro fue exitoso ('ORDEN REGISTRADA'), procede con el envío de notificaciones de éxito.
-    3. Si el flujo se detuvo por RECHAZO o falta de SLOT, informa únicamente al solicitante ({dispatcher_email}) sobre la denegación.
-    4. CORREO AL DESPACHADOR ({dispatcher_email}): Redacta un correo profesional que incluya una tabla con:
-       - ID de Orden ({order_id})
-       - Lista de Placas ({truck_plate}) y Conductores ({driver_name})
-       - Volúmenes ({fuel_volume})
-       - Detalles de Cita (Isla, Fecha y Horarios confirmados).
-    5. CORREO AL CONDUCTOR ({driver_email}): Envía un mensaje optimizado para móviles con la ubicación ({location}), 
-       la hora de su cita y la isla asignada, iterando sobre la lista de correos recolectada.
-    6. Asegúrate de agrupar todos los vehículos bajo el mismo {order_id} si la orden es multi-unidad.
-
+    1. Recupera el {dispatcher_email} validado en la Fase 1.
+    2. Recupera la lista de correos de conductores de la Fase 2.
+    3. Usa 'communications_tool' para notificar:
+       - ÉXITO: Si Phase_4 devolvió 'PHASE_4_SUCCESS', envía confirmación completa a despachador y conductores.
+       - CANCELACIÓN: Si cualquier fase previa devolvió 'RECHAZO', 'BLOQUEO' o 'ERROR', informa ÚNICAMENTE al {dispatcher_email} sobre la denegación del servicio y el motivo.
+    4. FORMATO CORREO DESPACHADOR: Tabla con {order_id}, {truck_plate}, {driver_name}, {fuel_volume} y detalles de cita.
+    5. FORMATO CONDUCTOR: Mensaje móvil con ubicación, hora y isla asignada.
   expected_output: >
-    Reporte de finalización de comunicaciones:
-    - ÉXITO: "COMUNICACIONES ENVIADAS - Se notificó al despachador y a los conductores de la orden {order_id} para el vehículo {truck_plate}."
-    - NOTIFICACIÓN_RECHAZO: "ALERTA ENVIADA - Se notificó al despachador {dispatcher_email} que la solicitud fue denegada."
+    Reporte final:
+    - ÉXITO: "COMUNICACIONES ENVIADAS - Orden {order_id} notificada."
+    - NOTIFICACIÓN_RECHAZO: "ALERTA ENVIADA - Despachador {dispatcher_email} notificado de la cancelación."
   agent: multi_channel_communications_manager
