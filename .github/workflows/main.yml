@@ -33,7 +33,16 @@ jobs:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           PYTHONPATH: ${{ github.workspace }}/src
         run: |
-          # BLINDAJE: Limpieza de espacios en blanco en la API KEY antes de la ejecución
+          # 1. BLINDAJE: Limpieza de la API KEY
           export GOOGLE_API_KEY=$(echo $GOOGLE_API_KEY | xargs)
-          sleep 5  # Un pequeño respiro antes de atacar la API
+          
+          # 2. ACCIÓN DE LIMPIEZA: Eliminamos residuos de compilaciones anteriores
+          echo "Limpiando caché de Python..."
+          find . -type d -name "__pycache__" -exec rm -rf {} +
+          find . -type f -name "*.pyc" -delete
+          
+          # 3. EJECUCIÓN:
+          # Si tu archivo está en la raíz, usa: python main.py
+          # Si sigue dentro de src, usa la ruta completa:
+          echo "Iniciando Gatekeeper System..."
           python src/fuel_terminal_security_logistics_gatekeeper/main.py
