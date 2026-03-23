@@ -15,10 +15,9 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        # SOLUCIÓN DEFINITIVA: Uso de la clase LLM nativa de crewAI
-        # Esto elimina el conflicto de 'API_KEY_INVALID' al usar el protocolo correcto de Google
+        # BLINDAJE INAMOVIBLE: Única fuente de verdad para el modelo
         self.gemini_llm = LLM(
-            model="gemini/gemini-1.5-pro", # O gemini-3.1-pro-preview según disponibilidad
+            model="gemini/gemini-3.1-pro-preview", # ESTRICTAMENTE 3.1
             api_key=os.getenv("GOOGLE_API_KEY"),
             temperature=0.1,
             max_rpm=10
