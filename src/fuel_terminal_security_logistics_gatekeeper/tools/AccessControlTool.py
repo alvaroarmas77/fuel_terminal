@@ -2,14 +2,14 @@ import pandas as pd
 import io
 import os
 import requests
+import urllib.parse
 from crewai.tools import BaseTool
-from pydantic import Field # Añadido para compatibilidad con CrewAI/Pydantic
+from pydantic import Field
 
 class AccessControlTool(BaseTool):
     name: str = "access_control_tool"
     description: str = "Valida la identidad del despachador en la pestaña Authorized_Users de Master_Control.xlsx"
     
-    # Arreglo para evitar errores de validación en CrewAI
     target_user: str = Field(default="soportesap@frontera-virtual.com")
 
     def _get_token(self):
@@ -17,7 +17,6 @@ class AccessControlTool(BaseTool):
         client_secret = os.getenv('AZURE_CLIENT_SECRET')
         tenant_id = os.getenv('AZURE_TENANT_ID')
         
-        # Validación preventiva de variables de entorno
         if not all([client_id, client_secret, tenant_id]):
             return None
 
@@ -29,7 +28,6 @@ class AccessControlTool(BaseTool):
             'scope': 'https://graph.microsoft.com/.default'
         }
         try:
-            # Añadido timeout para evitar el error de "Server disconnected"
             res = requests.post(url, data=data, timeout=20)
             return res.json().get('access_token')
         except:
@@ -46,22 +44,25 @@ class AccessControlTool(BaseTool):
         }
         
         try:
-            # Endpoint optimizado
-            url = f"https://graph.microsoft.com/v1.0/users/{self.target_user}/drive/root:/Fuel_Terminal_System/Master_Control.xlsx:/content"
+            # --- CORRECCIÓN DE RUTA PARA EVITAR 404 ---
+            # Se define la ruta relativa desde la raíz (root) y se codifica para la URL
+            path_file = "Fuel_Terminal_System/Master_Control.xlsx"
+            encoded_path = urllib.parse.quote(path_file)
             
-            # Añadido timeout y verificación de errores de red
+            # Endpoint con la ruta codificada según estándar de Microsoft Graph
+            url = f"https://graph.microsoft.com/v1.0/users/{self.target_user}/drive/root:/{encoded_path}:/content"
+            
             res = requests.get(url, headers=headers, timeout=30)
             
             if res.status_code != 200:
                 return f"ERROR_LECTURA_ARCHIVO: {res.status_code}"
 
-            # Procesamiento de Excel con motor robusto
-            # Se usa openpyxl para asegurar compatibilidad con .xlsx en Linux
+            # Procesamiento de Excel
             df = pd.read_excel(io.BytesIO(res.content), sheet_name="Authorized_Users", engine='openpyxl')
             
-            # Normalización estricta de entrada y columnas
+            # Normalización
             email_check = str(dispatcher_email).strip().lower()
-            df.columns = [str(c).strip() for c in df.columns] # Limpieza de nombres de columnas
+            df.columns = [str(c).strip() for c in df.columns]
             
             if 'Email' not in df.columns:
                 return "ERROR_ESTRUCTURA: Columna 'Email' no encontrada en el Excel."
@@ -71,7 +72,6 @@ class AccessControlTool(BaseTool):
             match = df[df['Email'] == email_check]
             
             if not match.empty:
-                # Uso de .get() seguro para evitar KeyErrors
                 nombre = match.iloc[0].get('Nombre', 'Usuario')
                 empresa = match.iloc[0].get('Empresa', 'Empresa Registrada')
                 return f"PHASE_1_SUCCESS|Nombre:{nombre}|Empresa:{empresa}"
