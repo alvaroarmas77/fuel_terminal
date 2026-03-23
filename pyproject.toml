@@ -6,13 +6,17 @@ authors = [{ name = "Alvaro Armas", email = "alvaroarmas@gmail.com" }]
 requires-python = ">=3.10,<3.13"
 
 dependencies = [
-    "crewai[tools]>=0.100.1",
-    "langchain-openai>=0.1.0",
-    "pydantic>=2.6.1",
+    "crewai[google,google-genai,tools]", # Driver nativo para Gemini 3.1
+    "litellm==1.59.8",                  # VERSIÓN CRÍTICA: Evita desconexiones en la nube
+    "google-generativeai>=0.8.0",       # Soporte para la API de Google
+    "python-dotenv>=1.0.0",
+    "pyyaml",
     "pandas>=2.1.0",
     "openpyxl>=3.1.2",
-    "python-dotenv>=1.0.0",
     "requests>=2.31.0",
+    "O365",                             # Necesario para tus herramientas de Azure/Outlook
+    "msal",                             # Permite autenticación sin token manual (.pickle)
+    "pysqlite3-binary",                 # Fix necesario para bases de datos en GitHub Actions
 ]
 
 [project.scripts]
@@ -27,3 +31,6 @@ packages = ["src/fuel_terminal_security_logistics_gatekeeper"]
 
 [tool.crewai]
 type = "crew"
+
+[tool.uv]
+package = true
