@@ -2,21 +2,20 @@
 name = "fuel_terminal_security_logistics_gatekeeper"
 version = "0.1.0"
 description = "Security and Logistics Gatekeeper for Fuel Terminal using crewAI"
-authors = [{ name = "Logistics Team", email = "admin@fuelterminal.com" }]
+authors = [{ name = "Alvaro Armas", email = "alvaroarmas@gmail.com" }]
 requires-python = ">=3.10,<3.13"
 
 dependencies = [
-    "crewai[tools]>=0.30.11",       # Instalación completa con dependencias de herramientas
+    "crewai[tools]>=0.100.1",
+    "langchain-openai>=0.1.0",
     "pydantic>=2.6.1",
     "pandas>=2.1.0",
     "openpyxl>=3.1.2",
-    "msal>=1.22.0",
-    "O365>=2.0.3",
     "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
 ]
 
 [project.scripts]
-# Asegúrate de que el nombre del paquete coincida con la carpeta dentro de 'src'
 gatekeeper_run = "fuel_terminal_security_logistics_gatekeeper.main:run"
 
 [build-system]

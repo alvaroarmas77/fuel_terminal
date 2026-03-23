@@ -1,7 +1,6 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
-from langchain_openai import ChatOpenAI # Cambio clave para compatibilidad con GitHub Models
-from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI # Cambio para compatibilidad con GitHub Models
 import os
 
 # Importación de Herramientas
@@ -17,13 +16,11 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        load_dotenv()
-        # Usamos ChatOpenAI como puente para GitHub Models
-        # Esto permite que el string "gemini/gemini-3.1-pro-preview" pase directo al proxy
+        # Configuración para GitHub Models usando el proxy de Azure
         self.gemini_llm = ChatOpenAI(
             model="gemini/gemini-3.1-pro-preview",
             openai_api_key=os.getenv("GOOGLE_API_KEY"),
-            openai_api_base="https://models.inference.ai.azure.com", # Endpoint estándar de GitHub Models
+            openai_api_base="https://models.inference.ai.azure.com",
             temperature=0
         )
 
@@ -77,46 +74,25 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             allow_delegation=False
         )
 
-    # --- DEFINICIÓN DE TAREAS ---
-
     @task
     def phase_1___user_authentication(self) -> Task:
-        return Task(
-            config=self.tasks_config['phase_1___user_authentication'], 
-            agent=self.security_authentication_specialist()
-        )
+        return Task(config=self.tasks_config['phase_1___user_authentication'], agent=self.security_authentication_specialist())
 
     @task
     def phase_2___registry_validation(self) -> Task:
-        return Task(
-            config=self.tasks_config['phase_2___registry_validation'], 
-            agent=self.registry_validation_specialist(), 
-            context=[self.phase_1___user_authentication()]
-        )
+        return Task(config=self.tasks_config['phase_2___registry_validation'], agent=self.registry_validation_specialist(), context=[self.phase_1___user_authentication()])
 
     @task
     def phase_3___access_control(self) -> Task:
-        return Task(
-            config=self.tasks_config['phase_3___access_control'], 
-            agent=self.intelligent_scheduling_coordinator(), 
-            context=[self.phase_2___registry_validation()]
-        )
+        return Task(config=self.tasks_config['phase_3___access_control'], agent=self.intelligent_scheduling_coordinator(), context=[self.phase_2___registry_validation()])
 
     @task
     def phase_4___order_logging(self) -> Task:
-        return Task(
-            config=self.tasks_config['phase_4___order_logging'], 
-            agent=self.order_logging_specialist(), 
-            context=[self.phase_3___access_control()]
-        )
+        return Task(config=self.tasks_config['phase_4___order_logging'], agent=self.order_logging_specialist(), context=[self.phase_3___access_control()])
 
     @task
     def phase_5___multi_channel_communications(self) -> Task:
-        return Task(
-            config=self.tasks_config['phase_5___multi_channel_communications'], 
-            agent=self.multi_channel_communications_manager(), 
-            context=[self.phase_4___order_logging()]
-        )
+        return Task(config=self.tasks_config['phase_5___multi_channel_communications'], agent=self.multi_channel_communications_manager(), context=[self.phase_4___order_logging()])
 
     @crew
     def crew(self) -> Crew:
