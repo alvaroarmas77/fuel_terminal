@@ -1,8 +1,8 @@
 import os
 import pandas as pd
 import io
+import requests
 from datetime import datetime
-from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
 
 # Sistema de importación compatible con CrewAI v0.100.1+
 try:
@@ -20,64 +20,50 @@ class OrderManagementTool(BaseTool):
         "Acciones: 'create' (registrar), 'read' (buscar) o 'delete' (eliminar)."
     )
 
+    def _get_token(self):
+        token_url = f"https://login.microsoftonline.com/{os.getenv('AZURE_TENANT_ID')}/oauth2/v2.0/token"
+        data = {
+            'grant_type': 'client_credentials',
+            'client_id': os.getenv('AZURE_CLIENT_ID'),
+            'client_secret': os.getenv('AZURE_CLIENT_SECRET'),
+            'scope': 'https://graph.microsoft.com/.default'
+        }
+        res = requests.post(token_url, data=data)
+        return res.json().get('access_token')
+
     def _run(self, action: str = "create", order_id: str = None, dispatcher_email: str = None, 
              plate_id: str = None, driver_name: str = None, fuel_volume: str = None, 
              assigned_island: str = None, appointment_date: str = None, 
              start_time: str = None, end_time: str = None) -> str:
         
-        account = get_ms_account()
-        if not account:
+        token = self._get_token()
+        if not token:
             return "ERROR_CONEXIÓN: Fallo de autenticación en Microsoft Graph."
 
+        headers = {'Authorization': f'Bearer {token}'}
+        target_user = "soportesap@frontera-virtual.com"
+        file_url = f"https://graph.microsoft.com/v1.0/users/{target_user}/drive/root:/Fuel_Terminal_System/Master_Control_Orders.xlsx"
+        content_url = f"{file_url}:/content"
+
         try:
-            target_user = "soportesap@frontera-virtual.com"
-            # CAMBIO MÍNIMO: Especificar resource para permisos de Aplicación
-            drive = account.storage().get_drive_by_endpoint(target_user)
-            
-            root = drive.get_root()
-            folder = root.get_item('Fuel_Terminal_System')
-            file_item = folder.get_item('Master_Control_Orders.xlsx')
-            
-            # Lógica original de búsqueda de carpeta/archivo
-            try:
-                folder = root.get_item('Fuel_Terminal_System')
-                file_item = folder.get_item('Master_Control_Orders.xlsx')
-            except Exception:
-                # Si no está en la carpeta, intenta en la raíz
-                file_item = root.get_item('Master_Control_Orders.xlsx')
+            # 1. Leer el archivo actual
+            res_download = requests.get(content_url, headers=headers)
+            if res_download.status_code == 200:
+                df = pd.read_excel(io.BytesIO(res_download.content))
+            else:
+                # Si el archivo no existe, creamos un DataFrame nuevo con las columnas necesarias
+                df = pd.DataFrame(columns=[
+                    'OrderID', 'Date of Request', 'Dispatcher Email', 'Truck Plate', 
+                    'Driver Name', 'Fuel Volume (Gallons)', 'Assigned Island', 
+                    'Appointment Date', 'Start Time', 'End Time'
+                ])
 
-            # Descarga y lectura del Excel
-            content = file_item.download()
-            try:
-                df = pd.read_excel(io.BytesIO(content))
-            except Exception:
-                df = pd.read_excel(io.BytesIO(content), engine='openpyxl')
-
-            # --- ACCIÓN: LECTURA ---
-            if action == "read":
-                if not order_id: return "ERROR: Falta order_id."
-                result = df[df['OrderID'].astype(str) == str(order_id)]
-                return result.to_string() if not result.empty else "ORDEN_NO_ENCONTRADA"
-
-            # --- ACCIÓN: ELIMINACIÓN ---
-            if action == "delete":
-                if not order_id: return "ERROR: Falta order_id."
-                df = df[df['OrderID'].astype(str) != str(order_id)]
-                self._save_to_excel(file_item, df)
-                return f"ORDEN_{order_id}_ELIMINADA"
-
-            # --- ACCIÓN: CREACIÓN (Manejo Multi-unidad) ---
             if action == "create":
-                # Limpieza y preparación de listas
+                # Lógica para manejar múltiples unidades si vienen separadas por comas
                 plates = [p.strip() for p in str(plate_id).split(',')]
                 drivers = [d.strip() for d in str(driver_name).split(',')]
                 volumes = [v.strip() for v in str(fuel_volume).split(',')]
-                
                 num_units = len(plates)
-                
-                # Aseguramos que las listas tengan el mismo largo que las placas
-                if len(drivers) < num_units: drivers = (drivers * num_units)[:num_units]
-                if len(volumes) < num_units: volumes = (volumes * num_units)[:num_units]
 
                 new_entries = []
                 for i in range(num_units):
@@ -86,27 +72,30 @@ class OrderManagementTool(BaseTool):
                         'Date of Request': datetime.now().strftime('%Y-%m-%d'),
                         'Dispatcher Email': dispatcher_email,
                         'Truck Plate': plates[i],
-                        'Driver Name': drivers[i],
-                        'Fuel Volume (Gallons)': volumes[i],
+                        'Driver Name': drivers[i] if i < len(drivers) else drivers[0],
+                        'Fuel Volume (Gallons)': volumes[i] if i < len(volumes) else volumes[0],
                         'Assigned Island': assigned_island,
                         'Appointment Date': appointment_date,
                         'Start Time': start_time,
                         'End Time': end_time
                     })
                 
-                # Concatenamos y guardamos
                 df_final = pd.concat([df, pd.DataFrame(new_entries)], ignore_index=True)
-                self._save_to_excel(file_item, df_final)
-                return f"REGISTRO_EXITOSO: {num_units} unidades en la orden {order_id}."
+                
+                # 2. Guardar y subir (PUT)
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df_final.to_excel(writer, index=False)
+                output.seek(0)
+                
+                res_upload = requests.put(content_url, headers=headers, data=output.read())
+                
+                if res_upload.status_code in [200, 201]:
+                    return f"REGISTRO_EXITOSO: {num_units} unidades en la orden {order_id}."
+                else:
+                    return f"ERROR_UPLOAD: {res_upload.status_code}"
+
+            return "ACCION_NO_IMPLEMENTADA"
 
         except Exception as e:
             return f"ERROR_OPERATIVO_EXCEL: {str(e)}"
-
-    def _save_to_excel(self, file_item, df):
-        """Función auxiliar para subir el archivo actualizado a OneDrive"""
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False)
-        output.seek(0)
-        # Usamos upload() para sobreescribir el contenido en OneDrive
-        file_item.upload(output)

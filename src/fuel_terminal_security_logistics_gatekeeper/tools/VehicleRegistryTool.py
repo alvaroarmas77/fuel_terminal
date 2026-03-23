@@ -1,6 +1,8 @@
 import pandas as pd
 import io
-from fuel_terminal_security_logistics_gatekeeper.utils.microsoft_graph import get_ms_account
+import os
+import requests
+from datetime import datetime
 try:
     from crewai.tools import BaseTool
 except ImportError:
@@ -10,19 +12,33 @@ class VehicleRegistryTool(BaseTool):
     name: str = "vehicle_registry_tool"
     description: str = "Valida placa y conductor en la pestaña Vehicle_registry de Master_Control.xlsx"
 
+    def _get_token(self):
+        token_url = f"https://login.microsoftonline.com/{os.getenv('AZURE_TENANT_ID')}/oauth2/v2.0/token"
+        data = {
+            'grant_type': 'client_credentials',
+            'client_id': os.getenv('AZURE_CLIENT_ID'),
+            'client_secret': os.getenv('AZURE_CLIENT_SECRET'),
+            'scope': 'https://graph.microsoft.com/.default'
+        }
+        res = requests.post(token_url, data=data)
+        return res.json().get('access_token')
+
     def _run(self, plate_id: str, driver_name: str) -> str:
-        account = get_ms_account()
-        if not account: return "ERROR_CONEXIÓN"
+        token = self._get_token()
+        if not token: return "ERROR_CONEXIÓN"
         
+        headers = {'Authorization': f'Bearer {token}'}
         target_user = "soportesap@frontera-virtual.com"
+        
         try:
-            # CAMBIO MÍNIMO: Asegurar el uso de get_drive_by_endpoint con target_user
-            drive = account.storage().get_drive_by_endpoint(target_user)
+            # Endpoint para descargar el archivo Master_Control.xlsx desde OneDrive del target_user
+            url = f"https://graph.microsoft.com/v1.0/users/{target_user}/drive/root:/Fuel_Terminal_System/Master_Control.xlsx:/content"
             
-            folder = drive.get_root().get_item('Fuel_Terminal_System')
-            file_item = folder.get_item('Master_Control.xlsx')
-            
-            content = file_item.download()
+            res = requests.get(url, headers=headers)
+            if res.status_code != 200:
+                return f"ERROR_LECTURA_ARCHIVO: {res.status_code}"
+
+            content = res.content
             df = pd.read_excel(io.BytesIO(content), sheet_name="Vehicle_Registry")
             
             # Normalización para búsqueda exacta
@@ -36,6 +52,8 @@ class VehicleRegistryTool(BaseTool):
             
             if not match.empty:
                 return "PHASE_2_SUCCESS"
-            return f"RECHAZO_FASE_2: El vehículo {p_limpia} o el conductor {d_limpio} no están vinculados o vigentes."
+            else:
+                return "VEHÍCULO_O_CONDUCTOR_NO_REGISTRADO"
+
         except Exception as e:
-            return f"ERROR_OPERATIVO_VEHICULO: {str(e)}"
+            return f"ERROR_OPERATIVO: {str(e)}"
