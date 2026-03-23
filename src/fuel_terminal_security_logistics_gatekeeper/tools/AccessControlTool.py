@@ -4,11 +4,18 @@ import os
 import requests
 import urllib.parse
 from crewai.tools import BaseTool
-from pydantic import Field
+from pydantic import BaseModel, Field
+from typing import Type
+
+# Definimos un esquema de argumentos para que el LLM no cometa errores de tipo
+class AccessControlInput(BaseModel):
+    """Esquema de entrada para la validación de acceso."""
+    dispatcher_email: str = Field(..., description="El correo electrónico del despachador a validar.")
 
 class AccessControlTool(BaseTool):
     name: str = "access_control_tool"
     description: str = "Valida la identidad del despachador en la pestaña Authorized_Users de Master_Control.xlsx"
+    args_schema: Type[BaseModel] = AccessControlInput # <--- ESTO ES CRÍTICO
     
     target_user: str = Field(default="soportesap@frontera-virtual.com")
 
@@ -44,11 +51,8 @@ class AccessControlTool(BaseTool):
         }
         
         try:
-            # --- RUTA DEL ARCHIVO ---
             path_file = "Fuel_Terminal_System/Master_Control.xlsx"
             encoded_path = urllib.parse.quote(path_file)
-            
-            # Endpoint de Microsoft Graph
             url = f"https://graph.microsoft.com/v1.0/users/{self.target_user}/drive/root:/{encoded_path}:/content"
             
             res = requests.get(url, headers=headers, timeout=30)
@@ -56,27 +60,24 @@ class AccessControlTool(BaseTool):
             if res.status_code != 200:
                 return f"ERROR_LECTURA_ARCHIVO: {res.status_code}"
 
-            # Procesamiento de Excel
             df = pd.read_excel(io.BytesIO(res.content), sheet_name="Authorized_Users", engine='openpyxl')
             
-            # --- NORMALIZACIÓN CORREGIDA ---
-            # Limpiamos nombres de columnas
+            # 1. Limpieza de nombres de columnas
             df.columns = [str(c).strip() for c in df.columns]
             
             if 'Email' not in df.columns:
-                return "ERROR_ESTRUCTURA: Columna 'Email' no encontrada en el Excel."
+                return "ERROR_ESTRUCTURA: Columna 'Email' no encontrada."
 
-            # Normalización del email de entrada (el parámetro)
+            # 2. Normalización Blindada (evita el error de Series)
+            # Convertimos a string, quitamos nulos, quitamos espacios y a minúsculas
+            df['Email'] = df['Email'].fillna('').astype(str).str.strip().lower()
+            
             email_check = str(dispatcher_email).strip().lower()
 
-            # Normalización de la columna del DataFrame usando el accesor .str
-            # Esto evita el error: 'Series' object has no attribute 'lower'
-            df['Email'] = df['Email'].astype(str).str.strip().lower() #supuesto cambio
-            # Búsqueda de coincidencia
+            # 3. Búsqueda exacta
             match = df[df['Email'] == email_check]
             
             if not match.empty:
-                # Uso de .get() seguro
                 nombre = match.iloc[0].get('Nombre', 'Usuario')
                 empresa = match.iloc[0].get('Empresa', 'Empresa Registrada')
                 return f"PHASE_1_SUCCESS|Nombre:{nombre}|Empresa:{empresa}"
@@ -84,5 +85,4 @@ class AccessControlTool(BaseTool):
             return f"RECHAZO_FASE_1: El usuario {dispatcher_email} no tiene permisos de acceso."
 
         except Exception as e:
-            # Reporte de error de sistema detallado
             return f"ERROR_SISTEMA_AUTH: {str(e)}"
