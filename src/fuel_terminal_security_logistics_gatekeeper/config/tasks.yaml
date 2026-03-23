@@ -3,14 +3,14 @@ phase_1___user_authentication:
     ACCIÓN OBLIGATORIA DE SEGURIDAD: 
     1. Usa la herramienta 'access_control_tool' para buscar {dispatcher_email}. Verifica que existan datos en la columna 'Email', si el resultado es exitoso, guarda estos datos como el "Solicitante Autorizado".
     2. La herramienta leerá 'Master_Control.xlsx' en la pestaña 'Authorized_Users'.
-    3. REGLA DE DETENCIÓN CRÍTICA: Si el resultado de la herramienta comienza con 'RECHAZO_FASE_1' o 'ERROR_CONEXIÓN', 
-       DEBES ABORTAR el flujo de trabajo inmediatamente. No intentes ejecutar ninguna otra tarea.
-    4. RESPUESTA DE ERROR: Si hay rechazo, retorna un mensaje final indicando: "PROCESO DETENIDO: El usuario {dispatcher_email} no tiene permisos de acceso".
+    3. REGLA DE DETENCIÓN CRÍTICA: Si el resultado de la herramienta comienza con 'RECHAZO_FASE_1', 'ERROR_CONEXIÓN' o 'ERROR_SISTEMA', 
+       DEBES ABORTAR el flujo de trabajo inmediatamente. No intentes ejecutar ninguna otra tarea y no reportes éxito.
+    4. RESPUESTA DE ERROR: Si hay rechazo o error de sistema, retorna un mensaje final indicando: "PROCESO DETENIDO: El usuario {dispatcher_email} no tiene permisos de acceso o hubo un fallo técnico".
     5. Solo si el resultado de la herramienta es exitoso, se considera validado y puedes dar paso a la siguiente fase de validación de activos.
   expected_output: >
     Un reporte de estado de seguridad con este formato exacto:
     - ÉXITO: "PHASE_1_SUCCESS - Usuario: [Nombre] - Empresa: [Empresa]. Procediendo a validación de activos."
-    - RECHAZO: "PROCESO DETENIDO: El correo {dispatcher_email} no se encuentra en la base de datos. Operación no autorizada."
+    - RECHAZO: "PROCESO DETENIDO: El correo {dispatcher_email} no se encuentra en la base de datos o error de sistema. Operación no autorizada."
   agent: security_authentication_specialist
 
 phase_2___registry_validation:
