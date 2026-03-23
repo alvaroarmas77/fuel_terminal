@@ -35,5 +35,5 @@ jobs:
         run: |
           # BLINDAJE: Limpieza de espacios en blanco en la API KEY antes de la ejecución
           export GOOGLE_API_KEY=$(echo $GOOGLE_API_KEY | xargs)
-          
+          sleep 5  # Un pequeño respiro antes de atacar la API
           python src/fuel_terminal_security_logistics_gatekeeper/main.py

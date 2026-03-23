@@ -20,7 +20,9 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             model="gemini/gemini-3.1-pro-preview", # ESTRICTAMENTE 3.1
             api_key=os.getenv("GOOGLE_API_KEY"),
             temperature=0.1,
-            max_rpm=10
+            max_rpm=2,
+            timeout=120,    # Damos más tiempo (2 min) para que el servidor responda
+            max_retries=3   # Si se desconecta, que lo intente 3 veces automáticamente
         )
 
     @agent
