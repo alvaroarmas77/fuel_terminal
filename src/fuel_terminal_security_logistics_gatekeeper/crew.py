@@ -1,6 +1,6 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
-from langchain_openai import ChatOpenAI # Cambio para compatibilidad con GitHub Models
+from langchain_openai import ChatOpenAI
 import os
 
 # Importación de Herramientas
@@ -16,9 +16,11 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self) -> None:
-        # Configuración para GitHub Models usando el proxy de Azure
+        # SOLUCIÓN MAESTRA: 
+        # 1. Eliminamos el prefijo 'gemini/' para que LiteLLM no intente usar el SDK de Google.
+        # 2. GitHub Models acepta el nombre del modelo directo si el base_url es correcto.
         self.gemini_llm = ChatOpenAI(
-            model="gemini/gemini-3.1-pro-preview",
+            model="gemini-3.1-pro-preview", 
             openai_api_key=os.getenv("GOOGLE_API_KEY"),
             openai_api_base="https://models.inference.ai.azure.com",
             temperature=0
@@ -73,6 +75,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             verbose=True,
             allow_delegation=False
         )
+
+    # --- TAREAS (Se mantienen exactamente igual) ---
 
     @task
     def phase_1___user_authentication(self) -> Task:
