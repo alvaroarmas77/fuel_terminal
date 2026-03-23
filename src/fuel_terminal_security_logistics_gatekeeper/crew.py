@@ -18,7 +18,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     def __init__(self) -> None:
         # Alineación con el modelo solicitado y temperatura 0 para tareas logísticas
         self.gemini_llm = ChatGoogleGenerativeAI(
-            model="gemini-3.1-pro-preview", 
+            model="google_ai_studio/gemini-3.1-pro-preview", 
             temperature=0,
             google_api_key=os.getenv("GOOGLE_API_KEY")
         )
