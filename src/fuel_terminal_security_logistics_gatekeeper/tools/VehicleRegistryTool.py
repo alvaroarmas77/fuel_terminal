@@ -42,34 +42,38 @@ class VehicleRegistryTool(BaseTool):
             # Leer pestaña "Vehicle_Registry"
             df = pd.read_excel(io.BytesIO(res.content), sheet_name="Vehicle_Registry", engine='openpyxl')
             
-            # Limpieza de nombres de columnas (quitar espacios invisibles)
+            # Limpieza de nombres de columnas (aseguramos que coincidan con la imagen del Excel)
             df.columns = [str(c).strip() for c in df.columns]
             
-            # --- LÓGICA DE BÚSQUEDA BLINDADA ---
+            # --- LÓGICA DE BÚSQUEDA "ESPEJO" DE TASKS.YAML ---
             tp_search = str(truck_plate).strip().upper()
             dn_search = str(driver_name).strip().lower()
             
-            found = False
-            result_data = {}
+            # 1. Filtramos primero por Placa (para ver todos los conductores autorizados para ese camión)
+            # Usamos 'Truck_Plate' con guion bajo como en tu imagen
+            df_placa = df[df['Truck_Plate'].astype(str).str.strip().str.upper() == tp_search]
 
-            # Iteración manual para evitar errores de tipos de datos en Pandas
-            for _, row in df.iterrows():
-                # Buscamos las columnas de forma flexible (con o sin espacio)
-                current_plate = str(row.get('Truck Plate', row.get('truck_plate', ''))).strip().upper()
-                current_driver = str(row.get('Driver Name', row.get('driver_name', ''))).strip().lower()
+            if df_placa.empty:
+                return f"RECHAZO_FASE_2: La placa {truck_plate} no se encuentra registrada en el sistema."
 
-                if current_plate == tp_search and current_driver == dn_search:
-                    found = True
-                    result_data = {
-                        'Email': row.get('Driver_Email', row.get('driver_email', 'Sin Email')),
-                        'ID': row.get('ID_Interno', row.get('id_interno', 'Sin ID'))
-                    }
+            # 2. Buscamos al conductor solicitado dentro de los autorizados para esa placa
+            # Usamos 'Driver_Name' con guion bajo como en tu imagen
+            authorized_driver = None
+            for _, row in df_placa.iterrows():
+                current_driver_in_excel = str(row['Driver_Name']).strip().lower()
+                if current_driver_in_excel == dn_search:
+                    authorized_driver = row
                     break
             
-            if found:
-                return f"PHASE_2_SUCCESS|Email:{result_data['Email']}|ID:{result_data['ID']}"
-            
-            return "RECHAZO_FASE_2: El vehículo o conductor no están autorizados o datos no coinciden."
+            if authorized_driver is not None:
+                # Éxito: Encontramos la combinación exacta
+                email = str(authorized_driver.get('Driver_Email', 'Sin Email'))
+                id_interno = str(authorized_driver.get('ID_Interno', 'Sin ID'))
+                return f"PHASE_2_SUCCESS|Email:{email}|ID:{id_interno}"
+            else:
+                # Fallo de Conductor: Pero la placa sí existe (Cumple punto 6 de la Task)
+                conductores_validos = ", ".join(df_placa['Driver_Name'].astype(str).unique())
+                return f"RECHAZO_FASE_2: El conductor {driver_name} no está vinculado a la placa {truck_plate}. Conductores autorizados para esta unidad: [{conductores_validos}]"
 
         except Exception as e:
             return f"ERROR_SISTEMA_REGISTRO: {str(e)}"

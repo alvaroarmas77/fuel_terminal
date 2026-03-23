@@ -45,7 +45,7 @@ def run():
     inputs = {
         'dispatcher_email': 'cliente_prueba@empresa.com',
         'driver_email': 'conductor1@transporte.com', 
-        'driver_name': 'Juan Pérez',
+        'driver_name': 'Juan Perez',
         'truck_plate': 'ABC-1234',
         'requested_datetime': ahora.strftime('%Y-%m-%dT%H:00:00'), 
         'current_date': ahora.strftime('%Y-%m-%d'),
