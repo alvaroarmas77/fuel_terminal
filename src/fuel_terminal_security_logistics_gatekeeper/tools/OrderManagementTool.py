@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import io
 import requests
+import urllib.parse
 from datetime import datetime
 from crewai.tools import BaseTool
 from pydantic import Field
@@ -45,25 +46,32 @@ class OrderManagementTool(BaseTool):
              start_time: str = None, end_time: str = None) -> str:
         
         token = self._get_token()
-        if not token: return "ERROR_CONEXIÓN_AZURE"
+        if not token: 
+            return "ERROR_CONEXIÓN_AZURE"
 
-        headers = {
+        # --- CORRECCIÓN DE RUTA (Sincronizada con las otras herramientas) ---
+        file_name = "Fuel_Terminal_System/Master_Control_Orders.xlsx"
+        encoded_path = urllib.parse.quote(file_name)
+        content_url = f"https://graph.microsoft.com/v1.0/users/{self.target_user}/drive/root:/{encoded_path}:/content"
+
+        headers_upload = {
             'Authorization': f'Bearer {token}',
             'Content-Type': 'application/octet-stream'
         }
         
-        # Ruta al archivo en OneDrive
-        content_url = f"https://graph.microsoft.com/v1.0/users/{self.target_user}/drive/root:/Fuel_Terminal_System/Master_Control_Orders.xlsx:/content"
+        headers_download = {
+            'Authorization': f'Bearer {token}'
+        }
 
         try:
-            # 1. Descargar el archivo actual
-            res_download = requests.get(content_url, headers={'Authorization': f'Bearer {token}'}, timeout=30)
+            # 1. Intentar descargar el archivo actual
+            res_download = requests.get(content_url, headers=headers_download, timeout=30)
             
             if res_download.status_code == 200:
                 # Se especifica openpyxl para compatibilidad en runners de GitHub
                 df = pd.read_excel(io.BytesIO(res_download.content), engine='openpyxl')
             else:
-                # Si el archivo no existe o hay error, crear estructura base
+                # Si el archivo no existe (404) o hay error, crear estructura base
                 df = pd.DataFrame(columns=[
                     'OrderID', 'Date_of_Request', 'dispatcher_email', 'Driver_Email', 
                     'truck_plate', 'Driver_Name', 'Fuel Volume (Gallons)', 
@@ -72,6 +80,7 @@ class OrderManagementTool(BaseTool):
 
             if action == "create":
                 # Procesamiento multi-unidad (separa por comas si vienen varios)
+                # Normalización preventiva con .strip()
                 plates = [p.strip() for p in str(truck_plate).split(',')]
                 drivers = [d.strip() for d in str(driver_name).split(',')]
                 volumes = [v.strip() for v in str(fuel_volume).split(',')]
@@ -80,14 +89,18 @@ class OrderManagementTool(BaseTool):
                 num_units = len(plates)
 
                 for i in range(num_units):
+                    # Lógica de asignación: usa el índice o el primer elemento si no hay suficientes
+                    d_name = drivers[i] if i < len(drivers) else (drivers[0] if drivers else "")
+                    f_vol = volumes[i] if i < len(volumes) else (volumes[0] if volumes else "")
+                    
                     new_entries.append({
-                        'OrderID': order_id,
+                        'OrderID': str(order_id),
                         'Date_of_Request': datetime.now().strftime('%Y-%m-%d'),
                         'dispatcher_email': dispatcher_email,
                         'Driver_Email': "pendiente@correo.com",
-                        'truck_plate': plates[i],
-                        'Driver_Name': drivers[i] if i < len(drivers) else (drivers[0] if drivers else ""),
-                        'Fuel Volume (Gallons)': volumes[i] if i < len(volumes) else (volumes[0] if volumes else ""),
+                        'truck_plate': plates[i].upper(),
+                        'Driver_Name': d_name,
+                        'Fuel Volume (Gallons)': f_vol,
                         'Assigned Island': assigned_island,
                         'Appointment Date': appointment_date,
                         'Start Time': start_time,
@@ -102,10 +115,9 @@ class OrderManagementTool(BaseTool):
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     df_final.to_excel(writer, index=False)
-                output.seek(0)
                 
-                # Subida de contenido binario
-                res_upload = requests.put(content_url, headers=headers, data=output.getvalue(), timeout=30)
+                # Subida de contenido binario (PUT reemplaza el archivo con la nueva versión)
+                res_upload = requests.put(content_url, headers=headers_upload, data=output.getvalue(), timeout=30)
                 
                 if res_upload.status_code in [200, 201]:
                     return f"ORDEN REGISTRADA: {num_units} unidades bajo ID {order_id}."
@@ -113,7 +125,9 @@ class OrderManagementTool(BaseTool):
                     return f"ERROR_AL_GUARDAR: {res_upload.status_code} - {res_upload.text}"
 
             elif action == "read":
-                result = df[df['OrderID'] == str(order_id)]
+                # Normalización para búsqueda robusta
+                df['OrderID'] = df['OrderID'].astype(str).str.strip()
+                result = df[df['OrderID'] == str(order_id).strip()]
                 return result.to_string() if not result.empty else "ORDEN_NO_ENCONTRADA"
 
             return "ACCION_SOLICITADA_NO_VALIDA"

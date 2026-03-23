@@ -44,12 +44,11 @@ class AccessControlTool(BaseTool):
         }
         
         try:
-            # --- CORRECCIÓN DE RUTA PARA EVITAR 404 ---
-            # Se define la ruta relativa desde la raíz (root) y se codifica para la URL
+            # --- RUTA DEL ARCHIVO ---
             path_file = "Fuel_Terminal_System/Master_Control.xlsx"
             encoded_path = urllib.parse.quote(path_file)
             
-            # Endpoint con la ruta codificada según estándar de Microsoft Graph
+            # Endpoint de Microsoft Graph
             url = f"https://graph.microsoft.com/v1.0/users/{self.target_user}/drive/root:/{encoded_path}:/content"
             
             res = requests.get(url, headers=headers, timeout=30)
@@ -60,18 +59,25 @@ class AccessControlTool(BaseTool):
             # Procesamiento de Excel
             df = pd.read_excel(io.BytesIO(res.content), sheet_name="Authorized_Users", engine='openpyxl')
             
-            # Normalización
-            email_check = str(dispatcher_email).strip().lower()
+            # --- NORMALIZACIÓN CORREGIDA ---
+            # Limpiamos nombres de columnas
             df.columns = [str(c).strip() for c in df.columns]
             
             if 'Email' not in df.columns:
                 return "ERROR_ESTRUCTURA: Columna 'Email' no encontrada en el Excel."
 
+            # Normalización del email de entrada (el parámetro)
+            email_check = str(dispatcher_email).strip().lower()
+
+            # Normalización de la columna del DataFrame usando el accesor .str
+            # Esto evita el error: 'Series' object has no attribute 'lower'
             df['Email'] = df['Email'].astype(str).str.strip().lower()
             
+            # Búsqueda de coincidencia
             match = df[df['Email'] == email_check]
             
             if not match.empty:
+                # Uso de .get() seguro
                 nombre = match.iloc[0].get('Nombre', 'Usuario')
                 empresa = match.iloc[0].get('Empresa', 'Empresa Registrada')
                 return f"PHASE_1_SUCCESS|Nombre:{nombre}|Empresa:{empresa}"
@@ -79,4 +85,5 @@ class AccessControlTool(BaseTool):
             return f"RECHAZO_FASE_1: El usuario {dispatcher_email} no tiene permisos de acceso."
 
         except Exception as e:
+            # Reporte de error de sistema detallado
             return f"ERROR_SISTEMA_AUTH: {str(e)}"
