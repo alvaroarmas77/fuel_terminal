@@ -22,20 +22,18 @@ jobs:
       - name: Instalar Dependencias
         run: |
           python -m pip install --upgrade pip
-          # Force installation and show progress to debug if it fails here
           pip install -r requirements.txt 
-          # Verification check
           pip show O365 || echo "O365 NOT INSTALLED"
 
       - name: Ejecutar Gatekeeper
         env:
-          # Inyectamos aquí, igual que en el proyecto que SI funciona
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: "${{ secrets.AZURE_CLIENT_SECRET }}"
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          # Usamos la ruta absoluta de GitHub workspace para evitar errores de path
           PYTHONPATH: ${{ github.workspace }}/src
         run: |
-          # Ejecución directa sin exports manuales
+          # BLINDAJE: Limpieza de espacios en blanco en la API KEY antes de la ejecución
+          export GOOGLE_API_KEY=$(echo $GOOGLE_API_KEY | xargs)
+          
           python src/fuel_terminal_security_logistics_gatekeeper/main.py

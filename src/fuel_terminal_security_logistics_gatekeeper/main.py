@@ -7,8 +7,12 @@ from dotenv import load_dotenv
 # 1. CARGA DE ENTORNO
 load_dotenv()
 
-# Bypass para telemetría y evitar que CrewAI busque OpenAI por defecto
-os.environ["OPENAI_API_KEY"] = "fake-key"
+# SOLUCIÓN DE BLINDAJE: Mapeo de la llave real para evitar conflictos de proveedores
+real_key = os.getenv("GOOGLE_API_KEY")
+if real_key:
+    # Aseguramos que la librería use la llave real incluso si busca OPENAI_API_KEY
+    os.environ["OPENAI_API_KEY"] = real_key.strip() 
+
 os.environ["OTEL_SDK_DISABLED"] = "true"
 
 # Importación de la Crew
@@ -18,8 +22,6 @@ def run():
     print("DEBUG: Iniciando Gatekeeper System...")
     ahora = datetime.now()
     
-    # Inputs homogeneizados con tasks.yaml
-    # Nota: Mantenemos plate_id temporalmente por compatibilidad con las herramientas físicas
     inputs = {
         'dispatcher_email': 'cliente_prueba@empresa.com',
         'driver_email': 'conductor1@transporte.com, conductor2@transporte.com', 
@@ -33,7 +35,9 @@ def run():
     }
 
     try:
-        # Ejecución con los inputs alineados
+        # Validación de blindaje en el log (sin exponer la llave)
+        print(f"DEBUG: Longitud de la API KEY activa: {len(real_key) if real_key else 0} caracteres")
+        
         FuelTerminalSecurityLogisticsGatekeeperCrew().crew().kickoff(inputs=inputs)
     except Exception as e:
         print(f"ERROR DURANTE LA EJECUCIÓN: {e}")
