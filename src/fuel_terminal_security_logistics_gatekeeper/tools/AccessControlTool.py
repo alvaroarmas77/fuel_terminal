@@ -50,26 +50,39 @@ class AccessControlTool(BaseTool):
             res = requests.get(url, headers=headers, timeout=30)
             if res.status_code != 200: return f"ERROR_LECTURA_ARCHIVO: {res.status_code}"
 
+            # Lectura del archivo
             df = pd.read_excel(io.BytesIO(res.content), sheet_name="Authorized_Users", engine='openpyxl')
             
-            # Normalización de columnas
+            # Limpiamos nombres de columnas
             df.columns = [str(c).strip() for c in df.columns]
-            if 'Email' not in df.columns: return "ERROR_ESTRUCTURA: Columna 'Email' no encontrada."
-
-            # BLINDAJE ANTI-ERROR 'Series' lower:
-            # 1. Forzamos conversión a string y llenamos vacíos
-            # 2. Usamos .str para procesar la columna como texto
-            df['Email'] = df['Email'].fillna('').astype(str).str.strip().lower()
-            email_check = str(dispatcher_email).strip().lower()
-
-            match = df[df['Email'] == email_check]
             
-            if not match.empty:
-                nombre = match.iloc[0].get('Nombre', 'Usuario')
-                empresa = match.iloc[0].get('Empresa', 'Empresa Registrada')
-                return f"PHASE_1_SUCCESS|Nombre:{nombre}|Empresa:{empresa}"
+            if 'Email' not in df.columns:
+                return "ERROR_ESTRUCTURA: Columna 'Email' no encontrada en el Excel."
+
+            # --- NUEVA LÓGICA DE BÚSQUEDA INFALIBLE ---
+            email_check = str(dispatcher_email).strip().lower()
+            
+            # Buscamos el email convirtiendo cada celda individualmente
+            # Esto evita CUALQUIER error de 'Series' o tipos de datos inconsistentes
+            authorized = False
+            user_data = {}
+
+            for _, row in df.iterrows():
+                # Convertimos la celda actual a string de forma segura y comparamos
+                current_email = str(row['Email']).strip().lower()
+                if current_email == email_check:
+                    authorized = True
+                    user_data = {
+                        'Nombre': row.get('Nombre', 'Usuario'),
+                        'Empresa': row.get('Empresa', 'Empresa Registrada')
+                    }
+                    break
+
+            if authorized:
+                return f"PHASE_1_SUCCESS|Nombre:{user_data['Nombre']}|Empresa:{user_data['Empresa']}"
             
             return f"RECHAZO_FASE_1: El usuario {dispatcher_email} no tiene permisos de acceso."
 
         except Exception as e:
+            # Captura de error detallada para depuración
             return f"ERROR_SISTEMA_AUTH: {str(e)}"
