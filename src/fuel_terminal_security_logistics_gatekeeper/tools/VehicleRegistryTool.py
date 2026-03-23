@@ -27,12 +27,10 @@ class VehicleRegistryTool(BaseTool):
         except: return None
 
     def _normalize_text(self, text: str) -> str:
-        """Elimina tildes, convierte a minúsculas y quita espacios en blanco extremos."""
+        """Elimina tildes, convierte a minúsculas y quita espacios en blanco."""
         if not text:
             return ""
-        # Convertir a string, quitar espacios y pasar a minúsculas
         text = str(text).strip().lower()
-        # Eliminar acentos/tildes usando normalización Unicode
         return "".join(
             c for c in unicodedata.normalize('NFD', text)
             if unicodedata.category(c) != 'Mn'
@@ -52,36 +50,33 @@ class VehicleRegistryTool(BaseTool):
             res = requests.get(url, headers=headers, timeout=30)
             if res.status_code != 200: return f"ERROR_ARCHIVO: {res.status_code}"
 
-            # Leer pestaña "Vehicle_Registry"
             df = pd.read_excel(io.BytesIO(res.content), sheet_name="Vehicle_Registry", engine='openpyxl')
-            
-            # Limpieza de nombres de columnas
             df.columns = [str(c).strip() for c in df.columns]
             
-            # Normalización de los inputs de búsqueda
             tp_search = str(truck_plate).strip().upper()
             dn_search_norm = self._normalize_text(driver_name)
             
-            # 1. Filtramos primero por Placa (Búsqueda exacta de placa)
+            # Filtro por placa
             df_placa = df[df['Truck_Plate'].astype(str).str.strip().str.upper() == tp_search]
 
             if df_placa.empty:
-                return f"RECHAZO_FASE_2: La placa {truck_plate} no se encuentra registrada en el sistema."
+                return f"RECHAZO_FASE_2: La placa {truck_plate} no se encuentra registrada."
 
-            # 2. Buscamos al conductor comparando versiones NORMALIZADAS
             authorized_driver = None
             for _, row in df_placa.iterrows():
-                # Normalizamos el nombre que viene de la fila del Excel
                 current_excel_driver_norm = self._normalize_text(row.get('Driver_Name', ''))
-                
                 if current_excel_driver_norm == dn_search_norm:
                     authorized_driver = row
                     break
             
             if authorized_driver is not None:
-                # ÉXITO: Los nombres coinciden tras normalizar
                 email = str(authorized_driver.get('Driver_Email', 'Sin Email'))
                 id_interno = str(authorized_driver.get('ID_Interno', 'Sin ID'))
                 return f"PHASE_2_SUCCESS|Email:{email}|ID:{id_interno}"
             else:
-                # FALLO: La placa existe pero el conductor no coincide
+                # AQUÍ ESTABA EL ERROR DE INDENTACIÓN: Ahora está correctamente alineado
+                conductores_validos = ", ".join(df_placa['Driver_Name'].astype(str).unique())
+                return f"RECHAZO_FASE_2: El conductor {driver_name} no está autorizado para la placa {truck_plate}. Registrados: [{conductores_validos}]"
+
+        except Exception as e:
+            return f"ERROR_SISTEMA_REGISTRO: {str(e)}"
