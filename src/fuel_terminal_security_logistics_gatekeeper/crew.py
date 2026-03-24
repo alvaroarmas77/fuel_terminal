@@ -84,7 +84,16 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
 
     @task
     def phase_4___order_logging(self) -> Task:
-        return Task(config=self.tasks_config['phase_4___order_logging'], agent=self.order_logging_specialist(), context=[self.phase_3___access_control()])
+        return Task(
+            config=self.tasks_config['phase_4___order_logging'],
+            agent=self.order_logging_specialist(),
+            # ESTO CONECTA EL FLUJO COMPLETO (Fases 1, 2 y 3):
+            context=[
+                self.phase_1___user_authentication(),
+                self.phase_2___registry_validation(),
+                self.phase_3___access_control()
+            ]
+        )
 
     @task
     def phase_5___multi_channel_communications(self) -> Task:

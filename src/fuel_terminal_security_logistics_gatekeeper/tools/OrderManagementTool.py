@@ -3,6 +3,7 @@ import pandas as pd
 import io
 import requests
 import urllib.parse
+import time
 from datetime import datetime
 from crewai.tools import BaseTool
 from pydantic import Field
@@ -63,78 +64,95 @@ class OrderManagementTool(BaseTool):
             'Assigned Island', 'Appointment Date', 'Start Time', 'End Time'
         ]
 
-        try:
-            # 1. DESCARGA DEL ARCHIVO
-            res_download = requests.get(content_url, headers=headers_base, timeout=30)
-            
-            if res_download.status_code == 200:
-                df = pd.read_excel(io.BytesIO(res_download.content), engine='openpyxl')
-                df.columns = [str(c).strip() for c in df.columns]
-                # Asegurar que todas las columnas existan
-                for col in expected_columns:
-                    if col not in df.columns:
-                        df[col] = None
-            else:
-                df = pd.DataFrame(columns=expected_columns)
-
-            # --- ACCIÓN: CREATE ---
-            if action == "create":
-                # Limpieza de datos recibidos
-                plates = [p.strip() for p in str(truck_plate).split(',')] if truck_plate else []
+        # Implementación de reintentos para manejar Error 423 (Locked)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # 1. DESCARGA DEL ARCHIVO
+                res_download = requests.get(content_url, headers=headers_base, timeout=30)
                 
-                if not plates:
-                    return "ERROR_DATOS: No se proporcionó truck_plate."
-
-                new_entries = []
-                for plate in plates:
-                    new_entries.append({
-                        'OrderID': str(order_id),
-                        'Date_of_Request': datetime.now().strftime('%Y-%m-%d'),
-                        'dispatcher_email': str(dispatcher_email),
-                        'Driver_Email': str(driver_email) if driver_email else "soporte@frontera-virtual.com",
-                        'truck_plate': plate.upper(),
-                        'Driver_Name': str(driver_name),
-                        'Fuel Volume (Gallons)': str(fuel_volume),
-                        'Assigned Island': str(assigned_island),
-                        'Appointment Date': str(appointment_date),
-                        'Start Time': str(start_time),
-                        'End Time': str(end_time)
-                    })
-                
-                df_new = pd.DataFrame(new_entries)
-                df_final = pd.concat([df, df_new], ignore_index=True)
-                
-                # Reordenar columnas para mantener consistencia
-                df_final = df_final[expected_columns]
-
-                # GUARDADO EN MEMORIA
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df_final.to_excel(writer, index=False)
-                
-                # SUBIDA A ONEDRIVE
-                headers_upload = {
-                    'Authorization': f'Bearer {token}',
-                    'Content-Type': 'application/octet-stream'
-                }
-                
-                res_upload = requests.put(content_url, headers=headers_upload, data=output.getvalue(), timeout=30)
-                
-                if res_upload.status_code in [200, 201]:
-                    return f"PHASE_4_SUCCESS|ORDEN:{order_id}|UNIDADES:{len(plates)}"
+                if res_download.status_code == 200:
+                    df = pd.read_excel(io.BytesIO(res_download.content), engine='openpyxl')
+                    df.columns = [str(c).strip() for c in df.columns]
+                    # Asegurar que todas las columnas existan
+                    for col in expected_columns:
+                        if col not in df.columns:
+                            df[col] = None
+                elif res_download.status_code == 423:
+                    if attempt < max_retries - 1:
+                        time.sleep(5)
+                        continue
+                    return "ERROR_ARCHIVO_BLOQUEADO: El archivo Excel está siendo usado por otro proceso."
                 else:
-                    return f"ERROR_AL_GUARDAR: Status {res_upload.status_code}"
+                    df = pd.DataFrame(columns=expected_columns)
 
-            # --- ACCIÓN: READ ---
-            elif action == "read":
-                if not order_id: return "ERROR: OrderID requerido."
-                search_id = str(order_id).strip().lower()
-                matches = df[df['OrderID'].astype(str).str.lower() == search_id]
-                
-                if matches.empty: return "ORDEN_NO_ENCONTRADA"
-                return f"RESULTADOS_ORDEN|{matches.to_dict(orient='records')}"
+                # --- ACCIÓN: CREATE ---
+                if action == "create":
+                    # Limpieza de datos recibidos
+                    plates = [p.strip() for p in str(truck_plate).split(',')] if truck_plate else []
+                    
+                    if not plates:
+                        return "ERROR_DATOS: No se proporcionó truck_plate."
 
-            return f"ERROR: Acción '{action}' no válida."
+                    new_entries = []
+                    for plate in plates:
+                        new_entries.append({
+                            'OrderID': str(order_id),
+                            'Date_of_Request': datetime.now().strftime('%Y-%m-%d'),
+                            'dispatcher_email': str(dispatcher_email),
+                            'Driver_Email': str(driver_email) if driver_email else "soporte@frontera-virtual.com",
+                            'truck_plate': plate.upper(),
+                            'Driver_Name': str(driver_name),
+                            'Fuel Volume (Gallons)': str(fuel_volume),
+                            'Assigned Island': str(assigned_island),
+                            'Appointment Date': str(appointment_date),
+                            'Start Time': str(start_time),
+                            'End Time': str(end_time)
+                        })
+                    
+                    df_new = pd.DataFrame(new_entries)
+                    df_final = pd.concat([df, df_new], ignore_index=True)
+                    
+                    # Reordenar columnas para mantener consistencia
+                    df_final = df_final[expected_columns]
 
-        except Exception as e:
-            return f"ERROR_OPERATIVO_EXCEL: {str(e)}"
+                    # GUARDADO EN MEMORIA
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        df_final.to_excel(writer, index=False)
+                    
+                    # SUBIDA A ONEDRIVE
+                    headers_upload = {
+                        'Authorization': f'Bearer {token}',
+                        'Content-Type': 'application/octet-stream'
+                    }
+                    
+                    res_upload = requests.put(content_url, headers=headers_upload, data=output.getvalue(), timeout=30)
+                    
+                    if res_upload.status_code in [200, 201]:
+                        return f"PHASE_4_SUCCESS|ORDEN:{order_id}|UNIDADES:{len(plates)}"
+                    elif res_upload.status_code == 423:
+                        if attempt < max_retries - 1:
+                            time.sleep(5)
+                            continue
+                        return f"ERROR_AL_GUARDAR: Archivo bloqueado (Status 423) tras {max_retries} intentos."
+                    else:
+                        return f"ERROR_AL_GUARDAR: Status {res_upload.status_code}"
+
+                # --- ACCIÓN: READ ---
+                elif action == "read":
+                    if not order_id: return "ERROR: OrderID requerido."
+                    search_id = str(order_id).strip().lower()
+                    matches = df[df['OrderID'].astype(str).str.lower() == search_id]
+                    
+                    if matches.empty: return "ORDEN_NO_ENCONTRADA"
+                    return f"RESULTADOS_ORDEN|{matches.to_dict(orient='records')}"
+
+                return f"ERROR: Acción '{action}' no válida."
+
+            except Exception as e:
+                # Manejo de excepciones con reintento si es un error de bloqueo
+                if "423" in str(e) and attempt < max_retries - 1:
+                    time.sleep(5)
+                    continue
+                return f"ERROR_OPERATIVO_EXCEL: {str(e)}"
