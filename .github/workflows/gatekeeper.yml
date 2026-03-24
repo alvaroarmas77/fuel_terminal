@@ -47,7 +47,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          # Lógica para detectar si es manual o automático con sintaxis corregida [ ]
+          # Lógica para detectar si es manual o automático
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             EMAIL="${{ github.event.inputs.sender }}"
             PLATE="${{ github.event.inputs.plate }}"
@@ -60,5 +60,6 @@ jobs:
             VOL="5000"
           fi
           
-          # Ejecución pasando todos los argumentos necesarios para tus inputs
-          python main.py --email "$EMAIL" --plate "$PLATE" --name "$NAME" --volume "$VOL" --model "gemini-3.1-pro-preview"
+          # Ejecución directa apuntando al archivo. 
+          # Gracias a las 4 líneas que agregaste al main.py, esto ya no fallará por módulos.
+          python src/fuel_terminal_security_logistics_gatekeeper/main.py --email "$EMAIL" --plate "$PLATE" --name "$NAME" --volume "$VOL" --model "gemini/gemini-3.1-pro-preview"

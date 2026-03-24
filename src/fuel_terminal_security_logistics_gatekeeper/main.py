@@ -3,8 +3,14 @@ import os
 import sys
 import shutil
 import argparse
+from pathlib import Path
+
+# Añade la carpeta 'src' al path para que Python encuentre tus módulos
+root_path = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(root_path))         
 from datetime import datetime
 from dotenv import load_dotenv
+
 
 # 1. FUNCIÓN DE LIMPIEZA DE CACHÉ
 def clean_cache():
