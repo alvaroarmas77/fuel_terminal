@@ -6,7 +6,7 @@ import urllib.parse
 from datetime import datetime
 from crewai.tools import BaseTool
 from pydantic import Field
-from typing import Optional, Type, Any
+from typing import Optional, Any
 
 class OrderManagementTool(BaseTool):
     name: str = "order_management_tool"
@@ -40,8 +40,8 @@ class OrderManagementTool(BaseTool):
             return None
 
     def _run(self, action: str = "create", order_id: str = None, dispatcher_email: str = None, 
-             truck_plate: str = None, driver_name: str = None, fuel_volume: str = None, 
-             assigned_island: str = None, appointment_date: str = None, 
+             driver_email: str = None, truck_plate: str = None, driver_name: str = None, 
+             fuel_volume: str = None, assigned_island: str = None, appointment_date: str = None, 
              start_time: str = None, end_time: str = None) -> str:
         
         token = self._get_token()
@@ -56,62 +56,63 @@ class OrderManagementTool(BaseTool):
             'Authorization': f'Bearer {token}'
         }
 
+        # Definición estricta de encabezados según tu requerimiento
+        expected_columns = [
+            'OrderID', 'Date_of_Request', 'dispatcher_email', 'Driver_Email', 
+            'truck_plate', 'Driver_Name', 'Fuel Volume (Gallons)', 
+            'Assigned Island', 'Appointment Date', 'Start Time', 'End Time'
+        ]
+
         try:
-            # 1. INTENTAR DESCARGAR EL ARCHIVO ACTUAL
+            # 1. DESCARGA DEL ARCHIVO
             res_download = requests.get(content_url, headers=headers_base, timeout=30)
             
             if res_download.status_code == 200:
                 df = pd.read_excel(io.BytesIO(res_download.content), engine='openpyxl')
-                # Limpieza preventiva de nombres de columnas
                 df.columns = [str(c).strip() for c in df.columns]
+                # Asegurar que todas las columnas existan
+                for col in expected_columns:
+                    if col not in df.columns:
+                        df[col] = None
             else:
-                # Si el archivo no existe, creamos la estructura maestra
-                df = pd.DataFrame(columns=[
-                    'OrderID', 'Date_of_Request', 'dispatcher_email', 'Driver_Email', 
-                    'truck_plate', 'Driver_Name', 'Fuel Volume', 
-                    'Assigned Island', 'Appointment Date', 'Start Time', 'End Time'
-                ])
+                df = pd.DataFrame(columns=expected_columns)
 
-            # --- ACCIÓN: CREATE (REGISTRO DE NUEVA ORDEN) ---
+            # --- ACCIÓN: CREATE ---
             if action == "create":
-                # Manejo de entradas múltiples (separadas por coma)
+                # Limpieza de datos recibidos
                 plates = [p.strip() for p in str(truck_plate).split(',')] if truck_plate else []
-                drivers = [d.strip() for d in str(driver_name).split(',')] if driver_name else []
-                volumes = [v.strip() for v in str(fuel_volume).split(',')] if fuel_volume else []
                 
+                if not plates:
+                    return "ERROR_DATOS: No se proporcionó truck_plate."
+
                 new_entries = []
-                num_units = len(plates)
-
-                if num_units == 0:
-                    return "ERROR_DATOS: No se proporcionaron placas de camión."
-
-                for i in range(num_units):
-                    # Lógica de emparejamiento para conductores y volúmenes
-                    d_name = drivers[i] if i < len(drivers) else (drivers[0] if drivers else "N/A")
-                    f_vol = volumes[i] if i < len(volumes) else (volumes[0] if volumes else "0")
-                    
+                for plate in plates:
                     new_entries.append({
                         'OrderID': str(order_id),
                         'Date_of_Request': datetime.now().strftime('%Y-%m-%d'),
                         'dispatcher_email': str(dispatcher_email),
-                        'Driver_Email': "pendiente@correo.com", # Se llena en fase posterior
-                        'truck_plate': str(plates[i]).upper(),
-                        'Driver_Name': d_name,
-                        'Fuel Volume': f_vol,
-                        'Assigned Island': str(assigned_island) if assigned_island else "TBD",
-                        'Appointment Date': str(appointment_date) if appointment_date else "TBD",
-                        'Start Time': str(start_time) if start_time else "--:--",
-                        'End Time': str(end_time) if end_time else "--:--"
+                        'Driver_Email': str(driver_email) if driver_email else "soporte@frontera-virtual.com",
+                        'truck_plate': plate.upper(),
+                        'Driver_Name': str(driver_name),
+                        'Fuel Volume (Gallons)': str(fuel_volume),
+                        'Assigned Island': str(assigned_island),
+                        'Appointment Date': str(appointment_date),
+                        'Start Time': str(start_time),
+                        'End Time': str(end_time)
                     })
                 
                 df_new = pd.DataFrame(new_entries)
                 df_final = pd.concat([df, df_new], ignore_index=True)
                 
-                # Guardar y Subir
+                # Reordenar columnas para mantener consistencia
+                df_final = df_final[expected_columns]
+
+                # GUARDADO EN MEMORIA
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     df_final.to_excel(writer, index=False)
                 
+                # SUBIDA A ONEDRIVE
                 headers_upload = {
                     'Authorization': f'Bearer {token}',
                     'Content-Type': 'application/octet-stream'
@@ -120,30 +121,20 @@ class OrderManagementTool(BaseTool):
                 res_upload = requests.put(content_url, headers=headers_upload, data=output.getvalue(), timeout=30)
                 
                 if res_upload.status_code in [200, 201]:
-                    return f"PHASE_4_SUCCESS|ORDEN REGISTRADA: {num_units} unidades bajo ID {order_id}."
+                    return f"PHASE_4_SUCCESS|ORDEN:{order_id}|UNIDADES:{len(plates)}"
                 else:
-                    return f"ERROR_AL_GUARDAR: {res_upload.status_code} - {res_upload.text}"
+                    return f"ERROR_AL_GUARDAR: Status {res_upload.status_code}"
 
-            # --- ACCIÓN: READ (CONSULTA DE ÓRDENES) ---
+            # --- ACCIÓN: READ ---
             elif action == "read":
-                if not order_id:
-                    return "ERROR: Se requiere OrderID para la lectura."
-                
+                if not order_id: return "ERROR: OrderID requerido."
                 search_id = str(order_id).strip().lower()
-                matches = []
-
-                # BÚSQUEDA MANUAL BLINDADA (Igual que AccessControlTool)
-                for _, row in df.iterrows():
-                    current_id = str(row.get('OrderID', '')).strip().lower()
-                    if current_id == search_id:
-                        matches.append(row.to_dict())
+                matches = df[df['OrderID'].astype(str).str.lower() == search_id]
                 
-                if not matches:
-                    return "ORDEN_NO_ENCONTRADA"
-                
-                return f"RESULTADOS_ORDEN|{str(matches)}"
+                if matches.empty: return "ORDEN_NO_ENCONTRADA"
+                return f"RESULTADOS_ORDEN|{matches.to_dict(orient='records')}"
 
-            return "ERROR: Acción solicitada ('{}') no es válida.".format(action)
+            return f"ERROR: Acción '{action}' no válida."
 
         except Exception as e:
             return f"ERROR_OPERATIVO_EXCEL: {str(e)}"

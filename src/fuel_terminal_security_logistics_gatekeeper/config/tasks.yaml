@@ -22,15 +22,15 @@ phase_2___registry_validation:
     INSTRUCCIONES DE VALIDACIÓN MULTI-REGISTRO:
      1. Usa `vehicle_registry_tool` para consultar la placa {truck_plate}. 
      2. CONSIDERACIÓN DE MULTIPLICIDAD: Identifica que para la placa {truck_plate} pueden existir múltiples conductores ({driver_name}), correos electrónicos y IDs internos vinculados en la pestaña 'Vehicle_registry'.
-     3. RECOPILACIÓN DE DATOS: Extrae y valida la vigencia de todos los activos asociados. Debes mapear cada instancia encontrada de 'Truck_Plate', 'Driver_Name', 'Driver_Email' e 'ID_Interno'.
+     3. RECOPILACIÓN DE DATOS: Extrae y valida la vigencia de todos los activos asociados. Debes mapear cada instancia encontrada de 'Truck_Plate', 'Driver_Name', 'Driver_Email' e 'ID_Interno'. **ES VITAL QUE CAPTURES EL Driver_Email EXACTO PARA USARLO EN LAS SIGUIENTES FASES.**
      4. CRITERIO DE FILTRADO: Si el {driver_name} proporcionado inicialmente no coincide con los registros, verifica si existe como conductor alternativo autorizado para esa misma placa antes de rechazar.
      5. REGLA DE DETENCIÓN: Si tras validar la lista completa el resultado es 'RECHAZO_FASE_2', DEBES ABORTAR la asignación de islas.
      6. ACCIÓN EN CASO DE FALLO: Si la validación falla para los activos solicitados, genera un mensaje detallando si el error es por la Placa, por el/los Conductores, o por falta de registros vigentes.
   expected_output: >
     Un dictamen de aptitud técnica estructurado que incluya:
     1. ESTADO: (PHASE_2_SUCCESS o RECHAZO).
-    2. DETALLE DE ACTIVOS: Resumen de placa {truck_plate} y lista de conductores autorizados.
-    3. FORMATO ÉXITO: "PHASE_2_SUCCESS - Vehículo: {truck_plate}. Todos los registros están vigentes. Proceder a asignación de isla."
+    2. DETALLE DE ACTIVOS: Resumen de placa {truck_plate} y lista de conductores autorizados con sus respectivos Driver_Email.
+    3. FORMATO ÉXITO: "PHASE_2_SUCCESS - Vehículo: {truck_plate}. Conductor: {driver_name} (Email: [Driver_Email]). Todos los registros están vigentes. Proceder a asignación de isla."
     4. FORMATO RECHAZO: "PROCESO DETENIDO: Error en validación de activos para la placa {truck_plate}."
   agent: registry_validation_specialist
 
@@ -62,8 +62,8 @@ phase_4___order_logging:
        SOLO PROCEDE si el resultado de Fase 3 es 'PHASE_3_SUCCESS'. 
        Si recibiste 'OPERACIÓN CANCELADA' o 'BLOQUEO' en las fases previas, NO utilices 'order_management_tool' y finaliza tu tarea informando la cancelación.
     2. GESTIÓN DE CARGA MÚLTIPLE: Identifica camiones ({truck_plate}), conductores ({driver_name}) y volúmenes ({fuel_volume}).
-    3. REGLA DE REGISTRO: Usa 'order_management_tool' para crear o actualizar entradas en 'Master_Control_Orders.xlsx'.
-    4. MAPEO DE COLUMNAS: OrderID ({order_id}), Date_of_Request ({current_date}), dispatcher_email ({dispatcher_email}), Driver_Email, truck_plate ({truck_plate}), Driver_Name, Fuel Volume, Assigned Island, Appointment Date, Start Time y End Time.
+    3. REGLA DE REGISTRO: Usa 'order_management_tool' para crear o actualizar entradas en 'Master_Control_Orders.xlsx'. **ASEGÚRATE DE INCLUIR EL Driver_Email RECUPERADO EN LA FASE 2.**
+    4. MAPEO DE COLUMNAS: OrderID ({order_id}), Date_of_Request ({current_date}), dispatcher_email ({dispatcher_email}), Driver_Email, truck_plate ({truck_plate}), Driver_Name, Fuel Volume (Gallons), Assigned Island, Appointment Date, Start Time y End Time.
     5. ATRIBUTO DE VINCULACIÓN: Mismo {order_id} para toda la orden maestra.
     6. Ejecuta iterativamente hasta registrar todos los activos confirmados en Fase 3.
   expected_output: >
@@ -78,10 +78,11 @@ phase_5___multi_channel_communications:
     1. Recupera el {dispatcher_email} validado en la Fase 1.
     2. Recupera la lista de correos de conductores de la Fase 2.
     3. Usa 'communications_tool' para notificar:
-       - ÉXITO: Si Phase_4 devolvió 'PHASE_4_SUCCESS', envía confirmación completa a despachador y conductores.
-       - CANCELACIÓN: Si cualquier fase previa devolvió 'RECHAZO', 'BLOQUEO' o 'ERROR', informa ÚNICAMENTE al {dispatcher_email} sobre la denegación del servicio y el motivo.
-    4. FORMATO CORREO DESPACHADOR: Tabla con {order_id}, {truck_plate}, {driver_name}, {fuel_volume} y detalles de cita.
-    5. FORMATO CONDUCTOR: Mensaje móvil con ubicación, hora y isla asignada.
+        - ÉXITO: **Solo si la Fase 4 indica 'PHASE_4_SUCCESS' para el ID {order_id}**, envía confirmación completa a despachador y conductores.
+        - CANCELACIÓN: Si cualquier fase previa devolvió 'RECHAZO', 'BLOQUEO' o 'ERROR', informa ÚNICAMENTE al {dispatcher_email} sobre la denegación del servicio y el motivo.
+    4. FORMATO CORREO DESPACHADOR: **Genera un cuerpo de correo en HTML profesional.** Incluye una tabla con bordes visibles que contenga: {order_id}, {truck_plate}, {driver_name}, {fuel_volume} y detalles de cita (Isla, Fecha, Hora Inicio/Fin).
+    5. FORMATO CONDUCTOR: Mensaje corto con ubicación, hora y isla asignada. **Asegúrate de enviar un correo individual a cada Driver_Email obtenido en la Fase 2.**
+    **CRÍTICO: Si el cuerpo del mensaje contiene variables vacías (TBD o None), sustitúyelas por "Información no disponible" antes de enviar.**
   expected_output: >
     Reporte final:
     - ÉXITO: "COMUNICACIONES ENVIADAS - Orden {order_id} notificada."
