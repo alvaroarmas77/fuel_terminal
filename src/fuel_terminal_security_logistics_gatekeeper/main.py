@@ -38,28 +38,31 @@ def run():
     parser = argparse.ArgumentParser()
     parser.add_argument("--email", help="Email del despachador")
     parser.add_argument("--plate", help="Placa del camión")
+    parser.add_argument("--name", help="Nombre del conductor", default="Conductor Registrado")
+    parser.add_argument("--volume", help="Volumen de combustible", default="5000")
+    parser.add_argument("--model", default="gemini/gemini-3.1-pro-preview")
     args = parser.parse_args()
 
     # --- LÓGICA HÍBRIDA (CONSOLA O ARGUMENTOS) ---
     if args.email and args.plate:
-        # Si viene de GitHub Actions (Plan C: Simulación o Correo Real)
+        # Si viene de GitHub Actions
         d_email = args.email
         t_plate = args.plate
-        d_name  = "Conductor Registrado" 
-        f_vol   = "5000"
+        d_name  = args.name
+        f_vol   = args.volume
         print(f"MODO AUTOMÁTICO: Procesando {t_plate} para {d_email}")
     else:
-        # Si lo corres tú manualmente en tu PC
+        # Modo Manual en PC (Consola)
         print("\n--- CONFIGURACIÓN MANUAL DE SOLICITUD ---")
         d_email = input("Email del Despachador [cliente_prueba@empresa.com]: ") or 'cliente_prueba@empresa.com'
         t_plate = input("Placa del Camión [ABC-1234]: ") or 'ABC-1234'
         d_name  = input("Nombre del Conductor [Juan Perez]: ") or 'Juan Perez'
         f_vol   = input("Volumen de Combustible [5000]: ") or '5000'
 
-    # 3. INPUTS (DINÁMICOS)
+    # 3. INPUTS (DINÁMICOS) - Se eliminó el bloque repetido que causaba el SyntaxError
     inputs = {
         'dispatcher_email': d_email,
-        'driver_email': d_email,      # <--- CAMBIO: Ahora usa el email del remitente real
+        'driver_email': d_email,
         'driver_name': d_name,
         'truck_plate': t_plate,
         'requested_datetime': ahora.strftime('%Y-%m-%dT%H:00:00'), 
@@ -70,8 +73,6 @@ def run():
     }
 
     try:
-        # Nota: Aquí se asume que el modelo se configura dentro de la clase Crew 
-        # o mediante variables de entorno (OPENAI_API_KEY).
         FuelTerminalSecurityLogisticsGatekeeperCrew().crew().kickoff(inputs=inputs)
     except Exception as e:
         print(f"ERROR DURANTE LA EJECUCIÓN: {e}")

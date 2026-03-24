@@ -12,8 +12,16 @@ on:
         description: 'Placa del vehículo a validar'
         required: true
         default: 'ABC-123'
+      driver_name:
+        description: 'Nombre del Conductor'
+        required: true
+        default: 'Juan Perez'
+      volume:
+        description: 'Volumen de combustible (galones)'
+        required: true
+        default: '5000'
 
-  # Opción 2: Activación Automática (Para cuando logres conectar Power Automate/Make)
+  # Opción 2: Activación Automática
   repository_dispatch:
     types: [email_event]
 
@@ -38,16 +46,19 @@ jobs:
       - name: Ejecutar Agente Gatekeeper
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          # Aquí puedes agregar más secrets si tu Excel está en la nube
         run: |
-          # Lógica para detectar si es manual o automático
+          # Lógica para detectar si es manual o automático con sintaxis corregida [ ]
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             EMAIL="${{ github.event.inputs.sender }}"
             PLATE="${{ github.event.inputs.plate }}"
+            NAME="${{ github.event.inputs.driver_name }}"
+            VOL="${{ github.event.inputs.volume }}"
           else
             EMAIL="${{ github.event.client_payload.sender }}"
             PLATE="${{ github.event.client_payload.plate }}"
+            NAME="Conductor Registrado"
+            VOL="5000"
           fi
           
-          # Ejecución del script principal con el modelo específico solicitado
-          python main.py --email "$EMAIL" --plate "$PLATE" --model "gemini-3.1-pro-preview"
+          # Ejecución pasando todos los argumentos necesarios para tus inputs
+          python main.py --email "$EMAIL" --plate "$PLATE" --name "$NAME" --volume "$VOL" --model "gemini-3.1-pro-preview"
