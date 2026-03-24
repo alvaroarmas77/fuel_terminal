@@ -22,7 +22,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             temperature=0.1,
             max_rpm=2,
             timeout=300,    # Damos más tiempo (2 min) para que el servidor responda
-            max_retries=3   # Si se desconecta, que lo intente 3 veces automáticamente
+            max_retries=5   # Si se desconecta, que lo intente 3 veces automáticamente
         )
 
     @agent
