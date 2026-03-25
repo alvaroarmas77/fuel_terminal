@@ -4,17 +4,20 @@ import sys
 import shutil
 import argparse
 from pathlib import Path
-
-# Añade la carpeta 'src' al path para que Python encuentre tus módulos
-root_path = Path(__file__).resolve().parent.parent.parent
-sys.path.append(str(root_path))         
 from datetime import datetime
 from dotenv import load_dotenv
 
+# Configuración de rutas
+current_file_path = Path(__file__).resolve()
+root_path = current_file_path.parent.parent.parent
+if str(root_path) not in sys.path:
+    sys.path.append(str(root_path))
+
+from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
 
 # 1. FUNCIÓN DE LIMPIEZA DE CACHÉ
 def clean_cache():
-    """Elimina archivos .pyc y carpetas __pycache__ para evitar errores de versiones viejas."""
+    """Elimina archivos .pyc y carpetas __pycache__."""
     print("DEBUG: Limpiando caché de Python (__pycache__)...")
     for root, dirs, files in os.walk('.', topdown=False):
         for name in files:
@@ -34,38 +37,42 @@ def clean_cache():
 load_dotenv()
 os.environ["OTEL_SDK_DISABLED"] = "true"
 
-from fuel_terminal_security_logistics_gatekeeper.crew import FuelTerminalSecurityLogisticsGatekeeperCrew
-
 def run():
     print("DEBUG: Iniciando Gatekeeper System...")
     ahora = datetime.now()
     
-    # Configuración de argumentos para GitHub Actions
+    # Configuración de argumentos
     parser = argparse.ArgumentParser()
     parser.add_argument("--email", help="Email del despachador")
     parser.add_argument("--plate", help="Placa del camión")
-    parser.add_argument("--name", help="Nombre del conductor", default="Conductor Registrado")
-    parser.add_argument("--volume", help="Volumen de combustible", default="5000")
+    parser.add_argument("--name", help="Nombre del conductor")
+    parser.add_argument("--volume", help="Volumen de combustible")
     parser.add_argument("--model", default="gemini/gemini-3.1-pro-preview")
     args = parser.parse_args()
 
-    # --- LÓGICA HÍBRIDA (CONSOLA O ARGUMENTOS) ---
+    # --- LÓGICA DE CAPTURA DE DATOS ---
+    # Prioridad 1: Argumentos (GitHub Actions)
+    # Prioridad 2: Inputs manuales (Solo si no hay argumentos Y hay una terminal activa)
+    
     if args.email and args.plate:
-        # Si viene de GitHub Actions
         d_email = args.email
         t_plate = args.plate
-        d_name  = args.name
-        f_vol   = args.volume
+        d_name  = args.name or "Conductor Registrado"
+        f_vol   = args.volume or "5000"
         print(f"MODO AUTOMÁTICO: Procesando {t_plate} para {d_email}")
     else:
-        # Modo Manual en PC (Consola)
+        # Si no hay argumentos y NO hay terminal (como en GitHub), fallar explícitamente
+        if not sys.stdin.isatty():
+            print("ERROR: No se proporcionaron argumentos y no hay terminal interactiva.")
+            sys.exit(1)
+            
         print("\n--- CONFIGURACIÓN MANUAL DE SOLICITUD ---")
         d_email = input("Email del Despachador [cliente_prueba@empresa.com]: ") or 'cliente_prueba@empresa.com'
         t_plate = input("Placa del Camión [ABC-1234]: ") or 'ABC-1234'
         d_name  = input("Nombre del Conductor [Juan Perez]: ") or 'Juan Perez'
         f_vol   = input("Volumen de Combustible [5000]: ") or '5000'
 
-    # 3. INPUTS (DINÁMICOS) - Se eliminó el bloque repetido que causaba el SyntaxError
+    # 3. CONSTRUCCIÓN DE INPUTS PARA EL AGENTE
     inputs = {
         'dispatcher_email': d_email,
         'driver_email': d_email,
@@ -79,6 +86,7 @@ def run():
     }
 
     try:
+        # Ejecución del agente
         FuelTerminalSecurityLogisticsGatekeeperCrew().crew().kickoff(inputs=inputs)
     except Exception as e:
         print(f"ERROR DURANTE LA EJECUCIÓN: {e}")

@@ -1,6 +1,7 @@
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
 import os
+from pathlib import Path
 
 # Importación de Herramientas
 from fuel_terminal_security_logistics_gatekeeper.tools.AccessControlTool import AccessControlTool
@@ -11,18 +12,20 @@ from fuel_terminal_security_logistics_gatekeeper.tools.CommunicationsTool import
 
 @CrewBase
 class FuelTerminalSecurityLogisticsGatekeeperCrew():
-    agents_config = 'config/agents.yaml'
-    tasks_config = 'config/tasks.yaml'
+    # Resolución de rutas absoluta para evitar errores en GitHub Actions (Linux)
+    base_path = Path(__file__).parent
+    agents_config = str(base_path / 'config/agents.yaml')
+    tasks_config = str(base_path / 'config/tasks.yaml')
 
     def __init__(self) -> None:
         # BLINDAJE INAMOVIBLE: Única fuente de verdad para el modelo
         self.gemini_llm = LLM(
-            model="gemini/gemini-3.1-pro-preview", # ESTRICTAMENTE 3.1
+            model="gemini/gemini-3.1-pro-preview", 
             api_key=os.getenv("GOOGLE_API_KEY"),
             temperature=0.1,
             max_rpm=2,
-            timeout=300,    # Damos más tiempo (2 min) para que el servidor responda
-            max_retries=5   # Si se desconecta, que lo intente 3 veces automáticamente
+            timeout=300,
+            max_retries=5
         )
 
     @agent
@@ -87,7 +90,6 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
         return Task(
             config=self.tasks_config['phase_4___order_logging'],
             agent=self.order_logging_specialist(),
-            # ESTO CONECTA EL FLUJO COMPLETO (Fases 1, 2 y 3):
             context=[
                 self.phase_1___user_authentication(),
                 self.phase_2___registry_validation(),

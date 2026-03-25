@@ -64,7 +64,7 @@ phase_4___order_logging:
     2. REGLA DE ORO: Los campos 'Start Time' y 'End Time' DEBEN ser 
        exactamente iguales a los confirmados por el Agente previo en la Fase 3.
     3. No inventes horarios. Si la Fase 3 confirmó '14:00', usa '14:00'.
-    4. Usa 'order_management_tool' para registrar la orden ORD-260324-1414.
+    4. Usa 'order_management_tool' para registrar la orden {order_id}.
     5. GESTIÓN DE CARGA MÚLTIPLE: Identifica camiones ({truck_plate}), conductores ({driver_name}) y volúmenes ({fuel_volume}).
     6. REGLA DE REGISTRO: Usa 'order_management_tool' para crear o actualizar entradas en 'Master_Control_Orders.xlsx'. **ASEGÚRATE DE INCLUIR EL Driver_Email RECUPERADO EN LA FASE 2.**
     7. MAPEO DE COLUMNAS: OrderID ({order_id}), Date_of_Request ({current_date}), dispatcher_email ({dispatcher_email}), Driver_Email, truck_plate ({truck_plate}), Driver_Name, Fuel Volume (Gallons), Assigned Island, Appointment Date, Start Time y End Time.
