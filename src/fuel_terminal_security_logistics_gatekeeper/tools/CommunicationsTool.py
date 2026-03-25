@@ -1,5 +1,6 @@
 import os
 import requests
+import time
 from crewai.tools import BaseTool
 from pydantic import Field
 
@@ -24,11 +25,14 @@ class CommunicationsTool(BaseTool):
             'client_secret': client_secret,
             'scope': 'https://graph.microsoft.com/.default'
         }
-        try:
-            res = requests.post(url, data=data, timeout=20)
-            return res.json().get('access_token')
-        except:
-            return None
+        for _ in range(2):
+            try:
+                res = requests.post(url, data=data, timeout=25)
+                return res.json().get('access_token')
+            except:
+                time.sleep(2)
+                continue
+        return None
 
     def _run(self, recipient_email: str, subject: str, body: str) -> str:
         token = self._get_token()
@@ -37,14 +41,12 @@ class CommunicationsTool(BaseTool):
             
         url = f"https://graph.microsoft.com/v1.0/users/{self.target_user}/sendMail"
         
-        # Soporte para múltiples destinatarios
         raw_emails = str(recipient_email).replace(';', ',')
         email_list = [e.strip() for e in raw_emails.split(',') if '@' in e]
         
         if not email_list:
             return "ERROR: Sin destinatarios válidos."
 
-        # El cuerpo del mensaje soporta HTML para las tablas de resumen
         email_data = {
             "message": {
                 "subject": subject,
@@ -65,7 +67,7 @@ class CommunicationsTool(BaseTool):
         }
         
         try:
-            res = requests.post(url, headers=headers, json=email_data, timeout=30)
+            res = requests.post(url, headers=headers, json=email_data, timeout=40)
             if res.status_code == 202:
                 return f"ENVÍO_EXITOSO: Notificación enviada correctamente."
             else:

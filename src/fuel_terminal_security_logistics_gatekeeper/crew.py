@@ -18,7 +18,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
     tasks_config = str(base_path / 'config/tasks.yaml')
 
     def __init__(self) -> None:
-        # BLINDAJE INAMOVIBLE: Única fuente de verdad para el modelo
+        # BLINDAJE INAMOVIBLE: Única fuente de verdad para el modelo gemini-3.1-pro-preview
+        # Se incrementan max_retries y timeout para máxima resiliencia en la nube
         self.gemini_llm = LLM(
             model="gemini/gemini-3.1-pro-preview", 
             api_key=os.getenv("GOOGLE_API_KEY"),
@@ -35,6 +36,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['security_authentication_specialist'],
             tools=[AccessControlTool()],
             llm=self.gemini_llm,
+            allow_delegation=False,
             verbose=True
         )
 
@@ -44,6 +46,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['registry_validation_specialist'],
             tools=[VehicleRegistryTool()],
             llm=self.gemini_llm,
+            allow_delegation=False,
             verbose=True
         )
 
@@ -53,6 +56,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['intelligent_scheduling_coordinator'],
             tools=[OutlookCalendarTool()],
             llm=self.gemini_llm,
+            allow_delegation=False,
             verbose=True
         )
 
@@ -62,6 +66,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['order_logging_specialist'],
             tools=[OrderManagementTool()],
             llm=self.gemini_llm,
+            allow_delegation=False,
             verbose=True
         )
 
@@ -71,6 +76,7 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             config=self.agents_config['multi_channel_communications_manager'],
             tools=[CommunicationsTool()],
             llm=self.gemini_llm,
+            allow_delegation=False,
             verbose=True
         )
 
@@ -108,5 +114,6 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
+            memory=False,
             verbose=True
         )

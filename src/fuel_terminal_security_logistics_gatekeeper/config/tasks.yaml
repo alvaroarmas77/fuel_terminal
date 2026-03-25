@@ -68,7 +68,7 @@ phase_4___order_logging:
     5. GESTIÓN DE CARGA MÚLTIPLE: Identifica camiones ({truck_plate}), conductores ({driver_name}) y volúmenes ({fuel_volume}).
     6. REGLA DE REGISTRO: Usa 'order_management_tool' para crear o actualizar entradas en 'Master_Control_Orders.xlsx'. **ASEGÚRATE DE INCLUIR EL Driver_Email RECUPERADO EN LA FASE 2.**
     7. MAPEO DE COLUMNAS: OrderID ({order_id}), Date_of_Request ({current_date}), dispatcher_email ({dispatcher_email}), Driver_Email, truck_plate ({truck_plate}), Driver_Name, Fuel Volume (Gallons), Assigned Island, Appointment Date, Start Time y End Time.
-    8. ATRIBUTO DE VINCULACIÓN: Mismo {order_id} para toda la orden maestra.
+    8. ATRIBUTO DE VINCULACIÓN: Mismo {order_id} for toda la orden maestra.
     9. Ejecuta iterativamente hasta registrar todos los activos confirmados en Fase 3.
   expected_output: >
     Reporte de consolidación:

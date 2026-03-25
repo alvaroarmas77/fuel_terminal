@@ -34,11 +34,14 @@ class OrderManagementTool(BaseTool):
             'client_secret': client_secret,
             'scope': 'https://graph.microsoft.com/.default'
         }
-        try:
-            res = requests.post(token_url, data=data, timeout=20)
-            return res.json().get('access_token')
-        except Exception:
-            return None
+        for _ in range(2):
+            try:
+                res = requests.post(token_url, data=data, timeout=25)
+                return res.json().get('access_token')
+            except Exception:
+                time.sleep(2)
+                continue
+        return None
 
     def _run(self, action: str = "create", order_id: str = None, dispatcher_email: str = None, 
              driver_email: str = None, truck_plate: str = None, driver_name: str = None, 
@@ -57,30 +60,28 @@ class OrderManagementTool(BaseTool):
             'Authorization': f'Bearer {token}'
         }
 
-        # Definición estricta de encabezados según tu requerimiento
         expected_columns = [
             'OrderID', 'Date_of_Request', 'dispatcher_email', 'Driver_Email', 
             'truck_plate', 'Driver_Name', 'Fuel Volume (Gallons)', 
             'Assigned Island', 'Appointment Date', 'Start Time', 'End Time'
         ]
 
-        # Implementación de reintentos para manejar Error 423 (Locked)
+        # Implementación de reintentos para manejar Error 423 (Locked) y Timeouts
         max_retries = 3
         for attempt in range(max_retries):
             try:
                 # 1. DESCARGA DEL ARCHIVO
-                res_download = requests.get(content_url, headers=headers_base, timeout=30)
+                res_download = requests.get(content_url, headers=headers_base, timeout=45)
                 
                 if res_download.status_code == 200:
                     df = pd.read_excel(io.BytesIO(res_download.content), engine='openpyxl')
                     df.columns = [str(c).strip() for c in df.columns]
-                    # Asegurar que todas las columnas existan
                     for col in expected_columns:
                         if col not in df.columns:
                             df[col] = None
                 elif res_download.status_code == 423:
                     if attempt < max_retries - 1:
-                        time.sleep(5)
+                        time.sleep(7)
                         continue
                     return "ERROR_ARCHIVO_BLOQUEADO: El archivo Excel está siendo usado por otro proceso."
                 else:
@@ -88,7 +89,6 @@ class OrderManagementTool(BaseTool):
 
                 # --- ACCIÓN: CREATE ---
                 if action == "create":
-                    # Limpieza de datos recibidos
                     plates = [p.strip() for p in str(truck_plate).split(',')] if truck_plate else []
                     
                     if not plates:
@@ -112,11 +112,8 @@ class OrderManagementTool(BaseTool):
                     
                     df_new = pd.DataFrame(new_entries)
                     df_final = pd.concat([df, df_new], ignore_index=True)
-                    
-                    # Reordenar columnas para mantener consistencia
                     df_final = df_final[expected_columns]
 
-                    # GUARDADO EN MEMORIA
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
                         df_final.to_excel(writer, index=False)
@@ -127,13 +124,13 @@ class OrderManagementTool(BaseTool):
                         'Content-Type': 'application/octet-stream'
                     }
                     
-                    res_upload = requests.put(content_url, headers=headers_upload, data=output.getvalue(), timeout=30)
+                    res_upload = requests.put(content_url, headers=headers_upload, data=output.getvalue(), timeout=50)
                     
                     if res_upload.status_code in [200, 201]:
                         return f"PHASE_4_SUCCESS|ORDEN:{order_id}|UNIDADES:{len(plates)}"
                     elif res_upload.status_code == 423:
                         if attempt < max_retries - 1:
-                            time.sleep(5)
+                            time.sleep(7)
                             continue
                         return f"ERROR_AL_GUARDAR: Archivo bloqueado (Status 423) tras {max_retries} intentos."
                     else:
@@ -151,8 +148,7 @@ class OrderManagementTool(BaseTool):
                 return f"ERROR: Acción '{action}' no válida."
 
             except Exception as e:
-                # Manejo de excepciones con reintento si es un error de bloqueo
                 if "423" in str(e) and attempt < max_retries - 1:
-                    time.sleep(5)
+                    time.sleep(7)
                     continue
                 return f"ERROR_OPERATIVO_EXCEL: {str(e)}"

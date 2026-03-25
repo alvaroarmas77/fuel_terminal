@@ -3,6 +3,7 @@ import io
 import os
 import requests
 import urllib.parse
+import time
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 from typing import Type
@@ -31,10 +32,15 @@ class AccessControlTool(BaseTool):
             'client_secret': client_secret,
             'scope': 'https://graph.microsoft.com/.default'
         }
-        try:
-            res = requests.post(url, data=data, timeout=20)
-            return res.json().get('access_token')
-        except: return None
+        # Implementación de reintento simple para el token
+        for _ in range(2):
+            try:
+                res = requests.post(url, data=data, timeout=25)
+                return res.json().get('access_token')
+            except: 
+                time.sleep(2)
+                continue
+        return None
 
     def _run(self, dispatcher_email: str) -> str:
         token = self._get_token()
@@ -47,8 +53,16 @@ class AccessControlTool(BaseTool):
             encoded_path = urllib.parse.quote(path_file)
             url = f"https://graph.microsoft.com/v1.0/users/{self.target_user}/drive/root:/{encoded_path}:/content"
             
-            res = requests.get(url, headers=headers, timeout=30)
-            if res.status_code != 200: return f"ERROR_LECTURA_ARCHIVO: {res.status_code}"
+            # Reintento de descarga por micro-cortes
+            res = None
+            for _ in range(2):
+                try:
+                    res = requests.get(url, headers=headers, timeout=35)
+                    if res.status_code == 200: break
+                except: time.sleep(2)
+
+            if not res or res.status_code != 200: 
+                return f"ERROR_LECTURA_ARCHIVO: {res.status_code if res else 'TIMEOUT'}"
 
             # Lectura del archivo
             df = pd.read_excel(io.BytesIO(res.content), sheet_name="Authorized_Users", engine='openpyxl')
@@ -59,16 +73,12 @@ class AccessControlTool(BaseTool):
             if 'Email' not in df.columns:
                 return "ERROR_ESTRUCTURA: Columna 'Email' no encontrada en el Excel."
 
-            # --- NUEVA LÓGICA DE BÚSQUEDA INFALIBLE ---
+            # --- LÓGICA DE BÚSQUEDA ---
             email_check = str(dispatcher_email).strip().lower()
-            
-            # Buscamos el email convirtiendo cada celda individualmente
-            # Esto evita CUALQUIER error de 'Series' o tipos de datos inconsistentes
             authorized = False
             user_data = {}
 
             for _, row in df.iterrows():
-                # Convertimos la celda actual a string de forma segura y comparamos
                 current_email = str(row['Email']).strip().lower()
                 if current_email == email_check:
                     authorized = True
@@ -84,5 +94,4 @@ class AccessControlTool(BaseTool):
             return f"RECHAZO_FASE_1: El usuario {dispatcher_email} no tiene permisos de acceso."
 
         except Exception as e:
-            # Captura de error detallada para depuración
             return f"ERROR_SISTEMA_AUTH: {str(e)}"

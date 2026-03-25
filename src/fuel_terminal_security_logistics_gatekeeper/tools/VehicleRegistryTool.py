@@ -4,6 +4,7 @@ import os
 import requests
 import urllib.parse
 import unicodedata
+import time
 from crewai.tools import BaseTool
 from pydantic import Field
 from typing import Type
@@ -21,15 +22,17 @@ class VehicleRegistryTool(BaseTool):
         if not all([client_id, client_secret, tenant_id]): return None
         url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
         data = {'grant_type': 'client_credentials', 'client_id': client_id, 'client_secret': client_secret, 'scope': 'https://graph.microsoft.com/.default'}
-        try:
-            res = requests.post(url, data=data, timeout=20)
-            return res.json().get('access_token')
-        except: return None
+        for _ in range(2):
+            try:
+                res = requests.post(url, data=data, timeout=25)
+                return res.json().get('access_token')
+            except: 
+                time.sleep(2)
+                continue
+        return None
 
     def _normalize_text(self, text: str) -> str:
-        """Elimina tildes, convierte a minúsculas y quita espacios en blanco."""
-        if not text:
-            return ""
+        if not text: return ""
         text = str(text).strip().lower()
         return "".join(
             c for c in unicodedata.normalize('NFD', text)
@@ -47,8 +50,14 @@ class VehicleRegistryTool(BaseTool):
             encoded_path = urllib.parse.quote(path_file)
             url = f"https://graph.microsoft.com/v1.0/users/{self.target_user}/drive/root:/{encoded_path}:/content"
             
-            res = requests.get(url, headers=headers, timeout=30)
-            if res.status_code != 200: return f"ERROR_ARCHIVO: {res.status_code}"
+            res = None
+            for _ in range(2):
+                try:
+                    res = requests.get(url, headers=headers, timeout=35)
+                    if res.status_code == 200: break
+                except: time.sleep(2)
+
+            if not res or res.status_code != 200: return f"ERROR_ARCHIVO: {res.status_code if res else 'TIMEOUT'}"
 
             df = pd.read_excel(io.BytesIO(res.content), sheet_name="Vehicle_Registry", engine='openpyxl')
             df.columns = [str(c).strip() for c in df.columns]
@@ -56,7 +65,6 @@ class VehicleRegistryTool(BaseTool):
             tp_search = str(truck_plate).strip().upper()
             dn_search_norm = self._normalize_text(driver_name)
             
-            # Filtro por placa
             df_placa = df[df['Truck_Plate'].astype(str).str.strip().str.upper() == tp_search]
 
             if df_placa.empty:
@@ -74,7 +82,6 @@ class VehicleRegistryTool(BaseTool):
                 id_interno = str(authorized_driver.get('ID_Interno', 'Sin ID'))
                 return f"PHASE_2_SUCCESS|Email:{email}|ID:{id_interno}"
             else:
-                # AQUÍ ESTABA EL ERROR DE INDENTACIÓN: Ahora está correctamente alineado
                 conductores_validos = ", ".join(df_placa['Driver_Name'].astype(str).unique())
                 return f"RECHAZO_FASE_2: El conductor {driver_name} no está autorizado para la placa {truck_plate}. Registrados: [{conductores_validos}]"
 
