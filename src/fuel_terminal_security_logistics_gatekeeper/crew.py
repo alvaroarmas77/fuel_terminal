@@ -25,7 +25,8 @@ class FuelTerminalSecurityLogisticsGatekeeperCrew():
             temperature=0.1,
             max_rpm=2,
             timeout=300,
-            max_retries=5
+            max_retries=5,
+            backoff_factor=2
         )
 
     @agent
