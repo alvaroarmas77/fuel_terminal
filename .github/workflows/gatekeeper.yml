@@ -41,7 +41,8 @@ jobs:
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install crewai langchain-openai pandas openpyxl
+          # Se agregan comillas y el soporte de google-genai para que funcione Gemini
+          pip install "crewai[google-genai]" langchain-openai pandas openpyxl
 
       - name: Ejecutar Agente Gatekeeper
         env:
