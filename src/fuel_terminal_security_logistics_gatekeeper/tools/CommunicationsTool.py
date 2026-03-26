@@ -25,11 +25,18 @@ class CommunicationsTool(BaseTool):
             'client_secret': client_secret,
             'scope': 'https://graph.microsoft.com/.default'
         }
+        # Forzamos headers y aumentamos timeout para el runner de GitHub
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
         for _ in range(2):
             try:
-                res = requests.post(url, data=data, timeout=25)
+                res = requests.post(url, data=data, headers=headers, timeout=30)
+                if res.status_code != 200:
+                    print(f"DEBUG AZURE ERROR (Comm): {res.text}")
+                    continue
                 return res.json().get('access_token')
-            except:
+            except Exception as e:
+                print(f"DEBUG EXCEPTION (Comm): {str(e)}")
                 time.sleep(2)
                 continue
         return None

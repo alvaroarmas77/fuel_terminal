@@ -32,12 +32,18 @@ class AccessControlTool(BaseTool):
             'client_secret': client_secret,
             'scope': 'https://graph.microsoft.com/.default'
         }
-        # Implementación de reintento simple para el token
+        # Forzamos headers y aumentamos timeout para el runner de GitHub
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+        
         for _ in range(2):
             try:
-                res = requests.post(url, data=data, timeout=25)
+                res = requests.post(url, data=data, headers=headers, timeout=30)
+                if res.status_code != 200:
+                    print(f"DEBUG AZURE ERROR (Auth): {res.text}")
+                    continue
                 return res.json().get('access_token')
-            except: 
+            except Exception as e:
+                print(f"DEBUG EXCEPTION (Auth): {str(e)}")
                 time.sleep(2)
                 continue
         return None

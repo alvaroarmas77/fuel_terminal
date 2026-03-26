@@ -34,11 +34,18 @@ class OrderManagementTool(BaseTool):
             'client_secret': client_secret,
             'scope': 'https://graph.microsoft.com/.default'
         }
+        # Forzamos headers y aumentamos timeout para el runner de GitHub
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
         for _ in range(2):
             try:
-                res = requests.post(token_url, data=data, timeout=25)
+                res = requests.post(token_url, data=data, headers=headers, timeout=30)
+                if res.status_code != 200:
+                    print(f"DEBUG AZURE ERROR (Order): {res.text}")
+                    continue
                 return res.json().get('access_token')
-            except Exception:
+            except Exception as e:
+                print(f"DEBUG EXCEPTION (Order): {str(e)}")
                 time.sleep(2)
                 continue
         return None

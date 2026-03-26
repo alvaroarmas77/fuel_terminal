@@ -20,13 +20,26 @@ class VehicleRegistryTool(BaseTool):
         client_secret = os.getenv('AZURE_CLIENT_SECRET')
         tenant_id = os.getenv('AZURE_TENANT_ID')
         if not all([client_id, client_secret, tenant_id]): return None
+        
         url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
-        data = {'grant_type': 'client_credentials', 'client_id': client_id, 'client_secret': client_secret, 'scope': 'https://graph.microsoft.com/.default'}
+        data = {
+            'grant_type': 'client_credentials', 
+            'client_id': client_id, 
+            'client_secret': client_secret, 
+            'scope': 'https://graph.microsoft.com/.default'
+        }
+        # Forzamos headers y aumentamos timeout para el runner de GitHub
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
         for _ in range(2):
             try:
-                res = requests.post(url, data=data, timeout=25)
+                res = requests.post(url, data=data, headers=headers, timeout=30)
+                if res.status_code != 200:
+                    print(f"DEBUG AZURE ERROR (Veh): {res.text}")
+                    continue
                 return res.json().get('access_token')
-            except: 
+            except Exception as e: 
+                print(f"DEBUG EXCEPTION (Veh): {str(e)}")
                 time.sleep(2)
                 continue
         return None
